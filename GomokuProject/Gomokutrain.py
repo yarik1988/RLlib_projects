@@ -18,7 +18,7 @@ BOARD_SIZE=6
 NUM_IN_A_ROW=3
 model_file = "weights_{}_{}.pickle".format(BOARD_SIZE,NUM_IN_A_ROW)
 
-class GomokuModel1(Model):
+class GomokuModel(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
         shape = input_dict["obs"]["real_obs"].shape
         self.model = Sequential()
@@ -33,27 +33,8 @@ class GomokuModel1(Model):
         output = self.model.output+inf_mask
         return output, self.model.get_layer("flat").output
 
-class GomokuModel2(Model):
-    def _build_layers_v2(self, input_dict, num_outputs, options):
-
-        shape = input_dict["obs"]["real_obs"].shape
-        self.model = Sequential()
-        self.model.add(layers.InputLayer(
-                input_tensor=tf.expand_dims(input_dict["obs"]["real_obs"], axis=3),
-                input_shape=(*shape, 1)))
-        self.model.add(layers.Conv2D(8, (3, 3), name='l1', activation='relu'))
-        self.model.add(layers.Conv2D(8, (3, 3), name='l2', activation='relu'))
-        self.model.add(layers.Flatten(name='flat'))
-        self.model.add(layers.Dense(int(shape[1])**2, name='last', activation='softmax'))
-        inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        output = self.model.output+inf_mask
-        return output, self.model.get_layer("flat").output
-
-
-
 ray.init()
-ModelCatalog.register_custom_model("GomokuModel1", GomokuModel1)
-ModelCatalog.register_custom_model("GomokuModel2", GomokuModel2)
+ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
 GENV=GomokuEnv.GomokuEnv(BOARD_SIZE,NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _:GENV)
 
@@ -61,7 +42,7 @@ register_env("GomokuEnv", lambda _:GENV)
 def gen_policy(i):
     config = {
         "model": {
-            "custom_model": ["GomokuModel1", "GomokuModel2"][i % 2],
+            "custom_model": GomokuModel,
         }
     }
     return (None, GENV.observation_space, GENV.action_space, config)
