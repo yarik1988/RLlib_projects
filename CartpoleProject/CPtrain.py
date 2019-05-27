@@ -5,10 +5,21 @@ import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
 import gym
+from gym import RewardWrapper
 from tensorflow.keras import layers, Sequential
-import CustomCartpole
 import pickle
 import os
+import _thread
+
+def input_thread(a_list):
+    input()
+    a_list.append(True)
+
+
+class ScaleReward(RewardWrapper):
+    def reward(self, reward):
+        return reward/100
+
 
 class CartpoleModel(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
@@ -25,8 +36,11 @@ class CartpoleModel(Model):
 
 ray.init()
 ModelCatalog.register_custom_model("CartpoleModel", CartpoleModel)
-CartpoleEnv = gym.make('CustomCartpole-v0')
+CartpoleEnv = gym.make('CartPole-v0')
+CartpoleEnv=ScaleReward(CartpoleEnv)
 register_env("CP", lambda _:CartpoleEnv)
+
+
 
 trainer = a3c.A3CTrainer(env="CP", config={
     "model": {"custom_model": "CartpoleModel"},
@@ -38,16 +52,16 @@ if os.path.isfile('weights.pickle'):
    weights = pickle.load(open("weights.pickle", "rb"))
    trainer.restore_from_object(weights)
 
-if False:
 
-    try:
-        while True:
-            rest=trainer.train()
-            print(rest["episode_reward_mean"])
-    except KeyboardInterrupt:
-        weights=trainer.save_to_object()
-        pickle.dump(weights, open('weights.pickle', 'wb'))
-        print('Model saved')
+a_list = [1]
+_thread.start_new_thread(input_thread, (a_list,))
+while not a_list:
+      rest=trainer.train()
+      print(rest["episode_reward_mean"])
+
+weights=trainer.save_to_object()
+pickle.dump(weights, open('weights.pickle', 'wb'))
+print('Model saved')
 
 
 obs=CartpoleEnv.reset()

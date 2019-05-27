@@ -11,60 +11,68 @@ import gym
 
 class GomokuEnv(MultiAgentEnv):
 
-    def __init__(self, board_size):
+    def __init__(self, board_size,num_in_a_row):
         self.board_size = board_size
+        self.num_in_a_row=num_in_a_row
         shape = (self.board_size, self.board_size)  # board_size * board_size
 
-        self.observation_space = spaces.Box(-np.ones(shape), np.ones(shape), dtype=np.int)
+        self.observation_space = spaces.Dict({
+            "real_obs": spaces.Box(-np.ones(shape), np.ones(shape), dtype=np.int),
+            "action_mask": spaces.Box(np.zeros(self.board_size**2), np.ones(self.board_size**2), dtype=np.int)})
         self.action_space = spaces.Discrete(board_size**2)
         self.viewer = None
         self.new_move = None
         self.nsteps = 0
         self.winning_stride = None
+        self.parity = None
 
     def reset(self):
         self.parity = False
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
-        obs = {"agent_1": self.board, "agent_2": -self.board}
+        obs_agent_0 = {"real_obs": self.board, "action_mask":  np.ones(self.board_size**2)}
+        obs_agent_1 = {"real_obs": -self.board, "action_mask": np.ones(self.board_size**2)}
+
+        obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         return obs
 
     def step(self, action_dict):
         done = False
+        cur_agent = "agent_{}".format(int(self.parity))
+        other_agent = "agent_{}".format(int(not self.parity))
         self.nsteps = self.nsteps + 1
-        if not self.parity:
-            action = action_dict["agent_1"]
-        else:
-            action = action_dict["agent_2"]
+        action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
-        rew = 0
+        rewards = {"agent_0": 0.01, "agent_1": 0.01}
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rew = (20 + 1000 / self.nsteps)*(1-2*self.parity)
+                rewards[cur_agent] = (0.2 + 10 / self.nsteps)*(1-2*self.parity)
+                rewards[other_agent] = -rewards[cur_agent]
                 done = True
             if not np.any(self.board == 0):  # Draw. No reward to anyone
                 done = True
         else:
+            rewards[cur_agent] = -0.1
             self.new_move = None
 
         self.parity = not self.parity
-
         mask_act = np.ndarray.flatten(self.board)
-        mask_act = mask_act == 0
+        mask_act = (mask_act == 0)
+        obs_agent_0 = {"real_obs": self.board, "action_mask":  mask_act}
+        obs_agent_1 = {"real_obs": -self.board, "action_mask": mask_act}
 
-        rewards = {"agent_1": rew, "agent_2": -rew}
-        obs = {"agent_1": self.board, "agent_2": -self.board}
+        obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}
         infos = {}
         return obs, rewards, dones, infos
 
 
     def query_isfive(self, arr, color):
-        if len(arr) < 5:
+        if len(arr) < self.num_in_a_row:
             return False
         grarr = np.max([sum(1 for i in g) for k, g in groupby(arr) if k == color])
-        return np.max(grarr) >= 5
+        return np.max(grarr) >= self.num_in_a_row
 
     def check_five(self, cur_put):
         dirs = [[0, 1], [1, 0], [1, 1], [-1, 1]]
@@ -115,8 +123,13 @@ class GomokuEnv(MultiAgentEnv):
         if self.winning_stride is not None:
             line = rendering.Line(*self.winning_stride)
             line.linewidth.stroke=5
-            line.set_color(1,0,0)
+            line.set_color(1, 0, 0)
             line.add_attr(rendering.Transform(translation=(0.5,0.5)))
 
             self.viewer.add_geom(line)
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
+    
+    def close(self):
+        if self.viewer:
+            self.viewer.close()
+            self.viewer = None
