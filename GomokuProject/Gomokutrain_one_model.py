@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
+import numpy as np
 import ray
 import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog, Model
@@ -8,7 +9,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, Sequential
 from GomokuEnv import GomokuEnv
 from ray import tune
-
+import pprint
 BOARD_SIZE=10
 
 class GomokuModel(Model):
@@ -27,12 +28,39 @@ class GomokuModel(Model):
 
 ray.init()
 ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-GomokuEnv_inst=GomokuEnv.GomokuEnv(BOARD_SIZE)
-register_env("GomokuEnv", lambda _:GomokuEnv_inst)
+GENV=GomokuEnv.GomokuEnv(BOARD_SIZE)
+register_env("GomokuEnv", lambda _:GENV)
 
+def gen_policy(i):
+    config = {
+        "model": {
+            "custom_model": "GomokuModel",
+        }
+    }
+    return (None, GENV.observation_space, GENV.action_space, config)
+
+
+policies = {
+    "policy_{}".format(i): gen_policy(i)
+    for i in range(2)
+}
+policy_ids = list(policies.keys())
+
+
+def map_fn(agent_id):
+    if agent_id == 'agent_1':
+        return policy_ids[0]
+    else:
+        return policy_ids[1]
 
 trainer = a3c.A3CTrainer(env="GomokuEnv", config={
     "model": {"custom_model": "GomokuModel"},
-},logger_creator=lambda _: ray.tune.logger.NoopLogger({},None))
+    "multiagent": {
+        "policies": policies,
+        "policy_mapping_fn": map_fn
 
-print(trainer.train())
+    },
+}, logger_creator=lambda _: ray.tune.logger.NoopLogger({},None))
+
+pp = pprint.PrettyPrinter(indent=4)
+pp.pprint(trainer.train())
