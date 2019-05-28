@@ -43,7 +43,7 @@ register_env("CP", lambda _:CartpoleEnv)
 
 
 trainer = a3c.A3CTrainer(env="CP", config={
-    "model": {"custom_model": "CartpoleModel"},
+    #"model": {"custom_model": "CartpoleModel"},
     #"observation_filter": "MeanStdFilter",
     #"vf_share_layers": True,
 }, logger_creator=lambda _:ray.tune.logger.NoopLogger({},None))
@@ -53,7 +53,7 @@ if os.path.isfile('weights.pickle'):
    trainer.restore_from_object(weights)
 
 
-a_list = [1]
+a_list = []
 _thread.start_new_thread(input_thread, (a_list,))
 while not a_list:
       rest=trainer.train()
@@ -77,4 +77,5 @@ while not done:
     CartpoleEnv.render()
     time.sleep(0.05)
 print(total_rev)
-
+CartpoleEnv.close()
+ray.shutdown()

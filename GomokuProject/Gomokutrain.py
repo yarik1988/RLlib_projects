@@ -1,21 +1,24 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
+import tensorflow as tf
 import os
 import ray
 import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
-import tensorflow as tf
+
 from tensorflow.keras import layers, Sequential
 from GomokuEnv import GomokuEnv
 import pickle
 import time
 import _thread
+import psutil
+from datetime import timedelta
 
 def input_thread(a_list):
     input()
     a_list.append(True)
-BOARD_SIZE=6
-NUM_IN_A_ROW=3
+BOARD_SIZE=10
+NUM_IN_A_ROW=5
 model_file = "weights_{}_{}.pickle".format(BOARD_SIZE,NUM_IN_A_ROW)
 
 class GomokuModel(Model):
@@ -25,13 +28,17 @@ class GomokuModel(Model):
         self.model.add(layers.InputLayer(
              input_tensor=tf.expand_dims(input_dict["obs"]["real_obs"], axis=3),
              input_shape=(*shape, 1)))
-        self.model.add(layers.Conv2D(8, (3, 3), name='l1', activation='relu'))
-        self.model.add(layers.Conv2D(8, (3, 3), name='l2', activation='relu'))
+        self.model.add(layers.Conv2D(16, (3, 3), name='l1', activation='relu'))
+        self.model.add(layers.Conv2D(32, (3, 3), name='l2', activation='relu'))
+        self.model.add(layers.Conv2D(32, (3, 3), name='l3', activation='relu'))
+        self.model.add(layers.Conv2D(32, (3, 3), name='l4', activation='relu'))
         self.model.add(layers.Flatten(name='flat'))
         self.model.add(layers.Dense(int(shape[1])**2, name='last', activation='softmax'))
+        self.model.summary()
         inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
         output = self.model.output+inf_mask
         return output, self.model.get_layer("flat").output
+
 
 ray.init()
 ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
@@ -42,7 +49,7 @@ register_env("GomokuEnv", lambda _:GENV)
 def gen_policy(i):
     config = {
         "model": {
-            "custom_model": GomokuModel,
+            "custom_model": 'GomokuModel',
         }
     }
     return (None, GENV.observation_space, GENV.action_space, config)
@@ -64,15 +71,11 @@ def map_fn(agent_id):
 
 
 trainer = a3c.A3CTrainer(env="GomokuEnv", config={
-    "model": {"custom_model": "GomokuModel"},
     "multiagent": {
         "policies": policies,
         "policy_mapping_fn": map_fn
 
     },
-    "num_workers": 3,
-    "num_envs_per_worker": 2,
-
 }, logger_creator=lambda _: ray.tune.logger.NoopLogger({},None))
 
 if os.path.isfile(model_file):
@@ -83,13 +86,19 @@ if os.path.isfile(model_file):
 
 a_list = []
 _thread.start_new_thread(input_thread, (a_list,))
+start = time. time()
 while not a_list:
-      rest=trainer.train()
-      print(rest["episode_reward_mean"])
-      print(rest["info"]["learner"])
+    rest = trainer.train()
+    mem_info = psutil.virtual_memory()
+    if mem_info.percent > 90:
+        a_list.append(True)
+    print("Memory usage = {}".format(mem_info.percent))
+    print("Episode reward mean = {}".format(rest["episode_reward_mean"]))
+    print(rest["info"]["learner"])
 
 weights = trainer.save_to_object()
 pickle.dump(weights, open(model_file, 'wb'))
+print("Execution time: {}".format(timedelta(seconds=time.time()-start)))
 
 obs = GENV.reset()
 cur_action = None
@@ -113,4 +122,4 @@ while not done:
     time.sleep(1)
 
 GENV.close()
-
+ray.shutdown()
