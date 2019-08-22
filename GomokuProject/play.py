@@ -20,7 +20,7 @@ if len(PC_agents)>0:
     ModelCatalog.register_custom_model("GomokuModel",gomoku_model.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
 
-    trainer = ppo.PPOTrainer(env="GomokuEnv", config={
+    trainer = ppo.APPOTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV,i) for i in range(2)},
             "policy_mapping_fn": gomoku_model.map_fn
@@ -59,5 +59,5 @@ while not done:
 GENV.hmove=None
 while GENV.hmove is None:
            GENV.render()
-	    
+GENV.close()    
 ray.shutdown()
