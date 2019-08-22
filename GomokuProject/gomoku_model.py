@@ -62,7 +62,7 @@ class GomokuModel(TFModelV2):
     def value_function(self):
         return self.value_out
 
-def gen_policy(GENV,i):
+def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
