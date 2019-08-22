@@ -15,8 +15,8 @@ class GomokuModel(TFModelV2):
             self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
             self.outputs = int(np.sqrt(num_outputs))
             layer_0 = tf.keras.layers.Flatten(name='flatlayer')(self.inputs)
-            layer_1 = tf.keras.layers.Dense(50, name="my_layer1",activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
-            layer_2 = tf.keras.layers.Dense(50, name="my_layer2", activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
+            layer_1 = tf.keras.layers.Dense(64, name="my_layer1",activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
+            layer_2 = tf.keras.layers.Dense(32, name="my_layer2", activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
             layer_out = tf.keras.layers.Dense(num_outputs,name="my_out",activation=None,kernel_initializer=normc_initializer(0.01))(layer_2)
             value_out = tf.keras.layers.Dense(1,name="value_out",activation=tf.nn.softmax,kernel_initializer=normc_initializer(0.01))(layer_2)
             self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
@@ -25,7 +25,7 @@ class GomokuModel(TFModelV2):
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
         board_tmp = tf.identity(board)
-        for i in range(rotc):
+        for i in range(rotc%4):
             board_tmp = tf.image.rot90(board_tmp)
         if is_flip:
             board_tmp = tf.image.flip_up_down(board_tmp)
@@ -33,7 +33,7 @@ class GomokuModel(TFModelV2):
         model_out_sq = tf.reshape(mod_out, [-1, self.outputs,self.outputs, 1])
         if is_flip:
             model_out_sq = tf.image.flip_up_down(model_out_sq)
-        for i in range(4-rotc):
+        for i in range((4-rotc)%4):
             model_out_sq = tf.image.rot90(model_out_sq)
 
         model_out_fin = tf.reshape(mod_out, [-1, self.outputs**2])

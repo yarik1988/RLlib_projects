@@ -1,11 +1,10 @@
 import os
 import ray
-import ray.rllib.agents.a3c as a3c
+import ray.rllib.agents.ppo as ppo
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import pickle
-import time
 import gomoku_model
 
 BOARD_SIZE=3
@@ -21,7 +20,7 @@ if len(PC_agents)>0:
     ModelCatalog.register_custom_model("GomokuModel",gomoku_model.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
 
-    trainer = a3c.A3CTrainer(env="GomokuEnv", config={
+    trainer = ppo.PPOTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV,i) for i in range(2)},
             "policy_mapping_fn": gomoku_model.map_fn
