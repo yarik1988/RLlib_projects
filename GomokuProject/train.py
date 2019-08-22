@@ -27,12 +27,12 @@ register_env("GomokuEnv", lambda _:GENV)
 
 
 
-trainer = ppo.APPOTrainer(env="GomokuEnv", config={
+trainer = a3c.A3CTrainer(env="GomokuEnv", config={
     "multiagent": {
         "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV) for i in range(2)},
         "policy_mapping_fn": gomoku_model.map_fn
 
-    },
+    }
 }, logger_creator=lambda _: ray.tune.logger.NoopLogger({},None))
 
 

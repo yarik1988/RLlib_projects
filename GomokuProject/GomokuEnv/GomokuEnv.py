@@ -98,8 +98,8 @@ class GomokuEnv(MultiAgentEnv):
                 rewards[other_agent] = -rewards[cur_agent]
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
-                rewards[cur_agent] = 0.5
-                rewards[other_agent] = 0.5
+                rewards[cur_agent] = 5
+                rewards[other_agent] = 5
                 done = True
         else:
             rewards[cur_agent] = -0.1

@@ -1,17 +1,19 @@
 import os
 import ray
 import ray.rllib.agents.ppo as ppo
+import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import pickle
 import gomoku_model
+import time
 
 BOARD_SIZE=3
 NUM_IN_A_ROW=3
 
-#PC_agents=['agent_0','agent_1']
-PC_agents=['agent_0']
+PC_agents=['agent_0','agent_1']
+#PC_agents=['agent_0']
 GENV=GomokuEnv.GomokuEnv(BOARD_SIZE,NUM_IN_A_ROW)
 
 
@@ -20,9 +22,9 @@ if len(PC_agents)>0:
     ModelCatalog.register_custom_model("GomokuModel",gomoku_model.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
 
-    trainer = ppo.APPOTrainer(env="GomokuEnv", config={
+    trainer = a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV,i) for i in range(2)},
+            "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV) for i in range(2)},
             "policy_mapping_fn": gomoku_model.map_fn
 
         },
@@ -55,6 +57,8 @@ while not done:
     obs, rew, dones, info = GENV.step(action_wrap)
     done=dones["__all__"]
     GENV.render()
+    if len(PC_agents)==2:
+        time.sleep(0.5)
 
 GENV.hmove=None
 while GENV.hmove is None:
