@@ -65,7 +65,7 @@ class GomokuEnv(MultiAgentEnv):
         self.nsteps = 0
         self.winning_stride = None
         self.parity = None
-	
+
     def cook_obs(self,board):
         obs=np.zeros(self.obs_shape,dtype=bool)
         obs[:,:,0]=(board==1)
