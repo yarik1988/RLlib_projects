@@ -15,11 +15,11 @@ class GomokuModel(TFModelV2):
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-        layer_0 = tf.keras.layers.Flatten(name='flatlayer')(self.inputs)
-        layer_1 = tf.keras.layers.Dense(64, name="my_layer1",activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
-        layer_2 = tf.keras.layers.Dense(32, name="my_layer2", activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
-        layer_out = tf.keras.layers.Dense(num_outputs,name="my_out", activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
-        value_out = tf.keras.layers.Dense(1,name="value_out", activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
+        layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
+        layer_1 = tf.keras.layers.Dense(64, name='_l1', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
+        layer_2 = tf.keras.layers.Dense(32,name='_l2', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
+        layer_out = tf.keras.layers.Dense(num_outputs, name='_lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
+        value_out = tf.keras.layers.Dense(1, name='_vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -62,11 +62,13 @@ class GomokuModel(TFModelV2):
     def value_function(self):
         return self.value_out
 
+
 def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True},
+            "custom_options": {"use_symmetry": False},
+            "vf_share_layers": True
         },
         "custom_action_dist": Categorical
     }
