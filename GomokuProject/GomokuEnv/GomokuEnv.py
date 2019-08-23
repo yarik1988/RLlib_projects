@@ -78,7 +78,7 @@ class GomokuEnv(MultiAgentEnv):
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
         obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ones(self.board_size**2)}
-        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.ones(self.board_size**2)}
+        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.zeros(self.board_size**2)}
 
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         return obs
@@ -98,18 +98,18 @@ class GomokuEnv(MultiAgentEnv):
                 rewards[other_agent] = -rewards[cur_agent]
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
-                rewards[cur_agent] = 5
-                rewards[other_agent] = 5
+                rewards[cur_agent] = 0.5
+                rewards[other_agent] = 0.5
                 done = True
         else:
             rewards[cur_agent] = -0.1
             self.new_move = None
 
         self.parity = not self.parity
-        mask_act = np.ndarray.flatten(self.board)
-        mask_act = (mask_act == 0)
-        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  mask_act}
-        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": mask_act}
+        mask_act = {other_agent: np.ndarray.flatten(self.board == 0), cur_agent: np.zeros(self.board_size**2)}
+
+        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  mask_act['agent_0']}
+        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": mask_act['agent_1']}
 
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}

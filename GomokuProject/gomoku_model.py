@@ -2,27 +2,27 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import tensorflow as tf
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.misc import normc_initializer
+from ray.rllib.models.tf.tf_action_dist import Categorical
 import numpy as np
 
 class GomokuModel(TFModelV2):
-    def __init__(self, obs_space, action_space, num_outputs, model_config,name, use_symmetry=False):
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(GomokuModel, self).__init__(obs_space, action_space,num_outputs, model_config, name)
-        self.use_symmetry=use_symmetry
-        with tf.compat.v1.variable_scope(
-                tf.compat.v1.VariableScope(tf.compat.v1.AUTO_REUSE, "shared"),
-                reuse=tf.compat.v1.AUTO_REUSE,
-                auxiliary_name_scope=False):
-            input_shp = obs_space.original_space.spaces['real_obs']
-            self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
-            self.outputs = int(np.sqrt(num_outputs))
-            layer_0 = tf.keras.layers.Flatten(name='flatlayer')(self.inputs)
-            layer_1 = tf.keras.layers.Dense(32, name="my_layer1",activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
-            layer_2 = tf.keras.layers.Dense(16, name="my_layer2", activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
-            layer_out = tf.keras.layers.Dense(num_outputs,name="my_out",activation=None,kernel_initializer=normc_initializer(0.01))(layer_2)
-            value_out = tf.keras.layers.Dense(1,name="value_out",activation=tf.nn.softmax,kernel_initializer=normc_initializer(0.01))(layer_2)
-            self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
-            self.base_model.summary()
-            self.register_variables(self.base_model.variables)
+        if 'use_symmetry' in model_config['custom_options']:
+            self.use_symmetry = model_config['custom_options']['use_symmetry']
+        else:
+            self.use_symmetry = False
+        input_shp = obs_space.original_space.spaces['real_obs']
+        self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
+        self.outputs = int(np.sqrt(num_outputs))
+        layer_0 = tf.keras.layers.Flatten(name='flatlayer')(self.inputs)
+        layer_1 = tf.keras.layers.Dense(64, name="my_layer1",activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
+        layer_2 = tf.keras.layers.Dense(32, name="my_layer2", activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
+        layer_out = tf.keras.layers.Dense(num_outputs,name="my_out", activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
+        value_out = tf.keras.layers.Dense(1,name="value_out", activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
+        self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
+        self.base_model.summary()
+        self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
         board_tmp = tf.identity(board)
@@ -66,7 +66,9 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-        }
+            "custom_options": {"use_symmetry": False},
+        },
+        "custom_action_dist": Categorical
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
