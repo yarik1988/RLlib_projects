@@ -66,7 +66,7 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": False},
+            "custom_options": {"use_symmetry": True},
         },
         "custom_action_dist": Categorical
     }

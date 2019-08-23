@@ -12,8 +12,9 @@ import time
 BOARD_SIZE=3
 NUM_IN_A_ROW=3
 
-#PC_agents=['agent_0','agent_1']
-PC_agents=['agent_1']
+PC_agents=['agent_0','agent_1']
+#PC_agents=['agent_1']
+#PC_agents=[]
 GENV=GomokuEnv.GomokuEnv(BOARD_SIZE,NUM_IN_A_ROW)
 
 
