@@ -1,11 +1,8 @@
-import os
+import pprint
 import ray
-import ray.rllib.agents.ppo as ppo
-import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
-import pickle
 import gomoku_model
 import time
 
@@ -13,10 +10,10 @@ BOARD_SIZE=3
 NUM_IN_A_ROW=3
 
 PC_agents=['agent_0','agent_1']
-PC_agents=['agent_1']
+#PC_agents=['agent_1']
 #PC_agents=[]
 GENV=GomokuEnv.GomokuEnv(BOARD_SIZE,NUM_IN_A_ROW)
-
+pp = pprint.PrettyPrinter(indent=4)
 
 if len(PC_agents)>0:
     ray.init()
@@ -24,7 +21,6 @@ if len(PC_agents)>0:
     register_env("GomokuEnv", lambda _:GENV)
     trainer = gomoku_model.get_trainer(GENV)
     trainer = gomoku_model.load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
-
 
 obs = GENV.reset()
 cur_action = None
