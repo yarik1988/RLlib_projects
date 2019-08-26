@@ -54,10 +54,10 @@ class GomokuEnv(MultiAgentEnv):
     def __init__(self, board_size,num_in_a_row):
         self.board_size = board_size
         self.num_in_a_row=num_in_a_row
-        self.obs_shape = (self.board_size, self.board_size, 3)  # board_size * board_size
+        self.obs_shape = (self.board_size, self.board_size, 1)  # board_size * board_size
 
         self.observation_space = spaces.Dict({
-            "real_obs": spaces.Box(np.zeros(self.obs_shape), np.ones(self.obs_shape), dtype=bool),
+            "real_obs": spaces.Box(-np.ones(self.obs_shape), np.ones(self.obs_shape)),
             "action_mask": spaces.Box(np.zeros(self.board_size**2), np.ones(self.board_size**2), dtype=bool)})
         self.action_space = spaces.Discrete(board_size**2)
         self.viewer = None
@@ -67,11 +67,11 @@ class GomokuEnv(MultiAgentEnv):
         self.parity = None
 
     def cook_obs(self,board):
-        obs=np.zeros(self.obs_shape,dtype=bool)
-        obs[:,:,0]=(board==1)
-        obs[:,:,1]=(board==-1)
-        obs[:,:,2]=(board==0)
-        return obs	    
+        #obs=np.zeros(self.obs_shape,dtype=bool)
+        #obs[:,:,0]=(board==1)
+        #obs[:,:,1]=(board==-1)
+        #obs[:,:,2]=(board==0)
+        return np.expand_dims(board, axis=2)
 
     def reset(self):
         self.parity = False

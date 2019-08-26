@@ -21,9 +21,9 @@ class GomokuModel(TFModelV2):
         self.outputs = int(np.sqrt(num_outputs))
         act_fun=tf.nn.sigmoid
         layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
-        layer_1 = tf.keras.layers.Dense(64, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
-        layer_2 = tf.keras.layers.Dense(32,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
-        layer_3 = tf.keras.layers.Dense(16, name='l3', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_2)
+        layer_1 = tf.keras.layers.Dense(128, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
+        layer_2 = tf.keras.layers.Dense(64,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
+        layer_3 = tf.keras.layers.Dense(32, name='l3', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_2)
         layer_out = tf.keras.layers.Dense(num_outputs, name='lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
         value_out = tf.keras.layers.Dense(1, name='vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
