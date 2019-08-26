@@ -96,8 +96,8 @@ class GomokuModel(TFModelV2):
             self.value_out=tf.reshape(self.value_out, [-1])
 
         inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        output = model_out+inf_mask
-        return output, state
+        model_out = model_out+inf_mask
+        return model_out, state
 
     def value_function(self):
         return self.value_out
@@ -109,7 +109,7 @@ def gen_policy(GENV):
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True},
         },
-        "custom_action_dist": MyCategorical
+        "custom_action_dist": MyCategorical,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
@@ -119,7 +119,7 @@ def map_fn(agent_id):
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.impala.ImpalaTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn

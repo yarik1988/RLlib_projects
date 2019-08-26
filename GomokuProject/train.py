@@ -2,6 +2,7 @@ import ray
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import time
+import pprint
 import _thread
 import psutil
 import gomoku_model
@@ -22,6 +23,7 @@ trainer=gomoku_model.load_weights(trainer,BOARD_SIZE,NUM_IN_A_ROW)
 a_list = []
 _thread.start_new_thread(input_thread, (a_list,))
 start = time.time()
+pp = pprint.PrettyPrinter(indent=4)
 while not a_list:
     rest = trainer.train()
     mem_info = psutil.virtual_memory()
@@ -29,7 +31,7 @@ while not a_list:
         a_list.append(True)
     print("Memory usage = {}".format(mem_info.percent))
     print("Episode reward mean = {}".format(rest["episode_reward_mean"]))
-    print(rest["info"]["learner"])
+    pp.pprint(rest["info"]["learner"])
     if time.time()-start>300:
           print('Weights saving')
           gomoku_model.save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)

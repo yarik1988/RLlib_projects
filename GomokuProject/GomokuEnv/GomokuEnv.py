@@ -103,7 +103,7 @@ class GomokuEnv(MultiAgentEnv):
                 rewards[other_agent] = 0.5
                 done = True
         else:
-            rewards[cur_agent] = -0.1
+            rewards[cur_agent] = -1  # Incorrect move. Penalty
             self.new_move = None
 
         self.parity = not self.parity
