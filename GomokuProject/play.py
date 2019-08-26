@@ -22,21 +22,9 @@ if len(PC_agents)>0:
     ray.init()
     ModelCatalog.register_custom_model("GomokuModel",gomoku_model.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
+    trainer = gomoku_model.get_trainer(GENV)
+    trainer = gomoku_model.load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
 
-    trainer = a3c.A3CTrainer(env="GomokuEnv", config={
-        "multiagent": {
-            "policies": {"policy_{}".format(i): gomoku_model.gen_policy(GENV) for i in range(2)},
-            "policy_mapping_fn": gomoku_model.map_fn
-
-        },
-    }, logger_creator=lambda _: ray.tune.logger.NoopLogger({},None))
-
-    model_file = "weights_{}_{}.pickle".format(BOARD_SIZE,NUM_IN_A_ROW)
-
-    if os.path.isfile(model_file):
-       weights = pickle.load(open(model_file, "rb"))
-       trainer.restore_from_object(weights)
-       print("Model previous state loaded!")
 
 obs = GENV.reset()
 cur_action = None
@@ -46,8 +34,8 @@ done = False
 cur_action = {'agent_0':None,'agent_1':None}
 
 while not done:
-    cur_ag='agent_{}'.format(int(GENV.parity))
-    policy_ag = 'policy_{}'.format(int(GENV.parity))
+    cur_ag = 'agent_{}'.format(int(GENV.parity))
+    policy_ag = gomoku_model.map_fn(cur_ag)
     obs_ag = obs[cur_ag]
     rew_ag = None if rew is None else rew['agent_{}'.format(int(GENV.parity))]
     if cur_ag in PC_agents:

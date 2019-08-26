@@ -1,9 +1,48 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
+import ray
+from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.misc import normc_initializer
-from ray.rllib.models.tf.tf_action_dist import Categorical
+from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
+import pickle
+import os
+
+class MyCategorical(TFActionDistribution):
+    """Categorical distribution for discrete action spaces."""
+
+    @override(ActionDistribution)
+    def logp(self, x):
+        return -tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=self.inputs, labels=tf.cast(x, tf.int32))
+
+    @override(ActionDistribution)
+    def entropy(self):
+        a0 = self.inputs - tf.reduce_max(
+            self.inputs, reduction_indices=[1], keep_dims=True)
+        ea0 = tf.exp(a0)
+        z0 = tf.reduce_sum(ea0, reduction_indices=[1], keep_dims=True)
+        p0 = ea0 / z0
+        return tf.reduce_sum(p0 * (tf.log(z0) - a0), reduction_indices=[1])
+
+    @override(ActionDistribution)
+    def kl(self, other):
+        a0 = self.inputs - tf.reduce_max(
+            self.inputs, reduction_indices=[1], keep_dims=True)
+        a1 = other.inputs - tf.reduce_max(
+            other.inputs, reduction_indices=[1], keep_dims=True)
+        ea0 = tf.exp(a0)
+        ea1 = tf.exp(a1)
+        z0 = tf.reduce_sum(ea0, reduction_indices=[1], keep_dims=True)
+        z1 = tf.reduce_sum(ea1, reduction_indices=[1], keep_dims=True)
+        p0 = ea0 / z0
+        return tf.reduce_sum(
+            p0 * (a0 - tf.log(z0) - a1 + tf.log(z1)), reduction_indices=[1])
+
+    @override(TFActionDistribution)
+    def _build_sample_op(self):
+        return tf.squeeze(tf.random.categorical(self.inputs, 1), axis=1)
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -16,10 +55,11 @@ class GomokuModel(TFModelV2):
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
         layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
-        layer_1 = tf.keras.layers.Dense(64, name='_l1', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
-        layer_2 = tf.keras.layers.Dense(32,name='_l2', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
-        layer_out = tf.keras.layers.Dense(num_outputs, name='_lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
-        value_out = tf.keras.layers.Dense(1, name='_vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_2)
+        layer_1 = tf.keras.layers.Dense(64, name='l1', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_0)
+        layer_2 = tf.keras.layers.Dense(32,name='l2', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_1)
+        layer_3 = tf.keras.layers.Dense(16, name='l3', activation=tf.nn.relu,kernel_initializer=normc_initializer(1.0))(layer_2)
+        layer_out = tf.keras.layers.Dense(num_outputs, name='lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
+        value_out = tf.keras.layers.Dense(1, name='vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -67,15 +107,36 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": False},
-            "vf_share_layers": True
+            "custom_options": {"use_symmetry": True},
         },
-        "custom_action_dist": Categorical
+        "custom_action_dist": MyCategorical
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
 def map_fn(agent_id):
-    if agent_id == 'agent_0':
-        return 'policy_0'
-    else:
-        return 'policy_1'
+     return 'policy_0'
+
+
+def get_trainer(GENV):
+    ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
+    trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
+        "multiagent": {
+            "policies": {"policy_0": gen_policy(GENV)},
+            "policy_mapping_fn": map_fn
+
+        }
+    }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
+    return trainer
+
+def load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW):
+    model_file = "weights_{}_{}.pickle".format(BOARD_SIZE, NUM_IN_A_ROW)
+    if os.path.isfile(model_file):
+        weights = pickle.load(open(model_file, "rb"))
+        trainer.restore_from_object(weights)
+        print("Model previous state loaded!")
+    return trainer
+
+def save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW):
+    model_file = "weights_{}_{}.pickle".format(BOARD_SIZE, NUM_IN_A_ROW)
+    weights = trainer.save_to_object()
+    pickle.dump(weights, open(model_file, 'wb'))
