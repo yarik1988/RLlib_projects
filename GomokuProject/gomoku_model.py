@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
 import ray
+from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.misc import normc_initializer
@@ -19,7 +20,7 @@ class GomokuModel(TFModelV2):
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-        act_fun=tf.nn.sigmoid
+        act_fun=tf.nn.relu
         layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
         layer_1 = tf.keras.layers.Dense(128, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
         layer_2 = tf.keras.layers.Dense(64,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
@@ -73,20 +74,33 @@ def gen_policy(GENV):
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True},
         },
+        "custom_action_dist": Categorical,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
 def map_fn(agent_id):
-     return 'policy_0'
+    #if agent_id=="agent_0":
+        return "policy_0"
+    #elif agent_id=="agent_1":
+    #    return "policy_1"
+
+def clb_episode_end(info):
+    episode = info["episode"]
+    episode.custom_metrics["agent_0_win_rate"] = episode.last_info_for("agent_0")["result"]
+    episode.custom_metrics["agent_1_win_rate"] = episode.last_info_for("agent_1")["result"]
 
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
+            #"policies":  {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
             "policies": {"policy_0": gen_policy(GENV)},
-            "policy_mapping_fn": map_fn
+            "policy_mapping_fn": map_fn,
 
+            },
+        "callbacks": {
+            "on_episode_end": clb_episode_end
         }
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
     return trainer

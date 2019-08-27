@@ -67,10 +67,6 @@ class GomokuEnv(MultiAgentEnv):
         self.parity = None
 
     def cook_obs(self,board):
-        #obs=np.zeros(self.obs_shape,dtype=bool)
-        #obs[:,:,0]=(board==1)
-        #obs[:,:,1]=(board==-1)
-        #obs[:,:,2]=(board==0)
         return np.expand_dims(board, axis=2)
 
     def reset(self):
@@ -85,8 +81,10 @@ class GomokuEnv(MultiAgentEnv):
 
     def step(self, action_dict):
         done = False
+
         cur_agent = "agent_{}".format(int(self.parity))
         other_agent = "agent_{}".format(int(not self.parity))
+        infos = {cur_agent: {"result": 0}, other_agent: {"result": 0}}
         self.nsteps = self.nsteps + 1
         action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
@@ -94,9 +92,9 @@ class GomokuEnv(MultiAgentEnv):
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rewards[cur_agent] = (1 + 2*self.num_in_a_row / self.nsteps)*(1-2*self.parity)
+                rewards[cur_agent] = (1 + 2*self.num_in_a_row / self.nsteps)
                 rewards[other_agent] = -rewards[cur_agent]
-
+                infos[cur_agent]["result"] = 1
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
                 rewards[cur_agent] = 0.5
@@ -108,13 +106,11 @@ class GomokuEnv(MultiAgentEnv):
 
         self.parity = not self.parity
         mask_act = {other_agent: np.ndarray.flatten(self.board == 0), cur_agent: np.zeros(self.board_size**2)}
-
         obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  mask_act['agent_0']}
         obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": mask_act['agent_1']}
-
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}
-        infos = {}
+
         return obs, rewards, dones, infos
 
 
