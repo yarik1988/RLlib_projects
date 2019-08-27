@@ -21,17 +21,17 @@ pp = pprint.PrettyPrinter(indent=4)
 while True:
     rest = trainer.train()
     mem_info = psutil.virtual_memory()
-    if mem_info.percent > 90:
-        break
-    if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-        break
     print("Memory usage = {}".format(mem_info.percent))
-    print("Episode reward mean = {}".format(rest["episode_reward_mean"]))
+    print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
+    print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
     pp.pprint(rest["info"]["learner"])
     if time.time()-start>300:
           print('Weights saving')
           gomoku_model.save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
           start = time.time()
+    if mem_info.percent > 90 or sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        break
+
 
 gomoku_model.save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
 ray.shutdown()
