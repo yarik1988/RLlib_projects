@@ -24,7 +24,6 @@ while True:
     print("Memory usage = {}".format(mem_info.percent))
     print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
     print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
-    pp.pprint(rest["info"]["learner"])
     if time.time()-start>300:
           print('Weights saving')
           gomoku_model.save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)

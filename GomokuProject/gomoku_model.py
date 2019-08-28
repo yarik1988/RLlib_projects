@@ -22,9 +22,9 @@ class GomokuModel(TFModelV2):
         self.outputs = int(np.sqrt(num_outputs))
         act_fun=tf.nn.relu
         layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
-        layer_1 = tf.keras.layers.Dense(128, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
-        layer_2 = tf.keras.layers.Dense(64,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
-        layer_3 = tf.keras.layers.Dense(32, name='l3', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_2)
+        layer_1 = tf.keras.layers.Dense(64, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
+        layer_2 = tf.keras.layers.Dense(32,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
+        layer_3 = tf.keras.layers.Dense(16, name='l3', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_2)
         layer_out = tf.keras.layers.Dense(num_outputs, name='lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
         value_out = tf.keras.layers.Dense(1, name='vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
@@ -79,10 +79,10 @@ def gen_policy(GENV):
     return (None, GENV.observation_space, GENV.action_space, config)
 
 def map_fn(agent_id):
-    #if agent_id=="agent_0":
+    if agent_id=="agent_0":
         return "policy_0"
-    #elif agent_id=="agent_1":
-    #    return "policy_1"
+    elif agent_id=="agent_1":
+        return "policy_1"
 
 def clb_episode_end(info):
     episode = info["episode"]
@@ -94,14 +94,12 @@ def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            #"policies":  {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
-            "policies": {"policy_0": gen_policy(GENV)},
+            "policies":  {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
+            #"policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
-
             },
-        "callbacks": {
-            "on_episode_end": clb_episode_end
-        }
+        "callbacks":
+            {"on_episode_end": clb_episode_end},
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
     return trainer
 
