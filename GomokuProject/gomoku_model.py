@@ -4,7 +4,6 @@ import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
-from ray.rllib.models.tf.misc import normc_initializer
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
 import pickle
@@ -17,16 +16,16 @@ class GomokuModel(TFModelV2):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
+        act_fun = lambda x: tf.nn.leaky_relu(x, alpha=0.05)
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-        act_fun=tf.nn.relu
         layer_0 = tf.keras.layers.Flatten(name='fl')(self.inputs)
-        layer_1 = tf.keras.layers.Dense(64, name='l1', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_0)
-        layer_2 = tf.keras.layers.Dense(32,name='l2', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_1)
-        layer_3 = tf.keras.layers.Dense(16, name='l3', activation=act_fun,kernel_initializer=normc_initializer(1.0))(layer_2)
-        layer_out = tf.keras.layers.Dense(num_outputs, name='lo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
-        value_out = tf.keras.layers.Dense(1, name='vo', activation=None, kernel_initializer=normc_initializer(0.01))(layer_3)
+        layer_1 = tf.keras.layers.Dense(64, name='l1', activation=act_fun)(layer_0)
+        layer_2 = tf.keras.layers.Dense(32,name='l2', activation=act_fun)(layer_1)
+        layer_3 = tf.keras.layers.Dense(16, name='l3', activation=act_fun)(layer_2)
+        layer_out = tf.keras.layers.Dense(num_outputs, name='lo', activation=None)(layer_3)
+        value_out = tf.keras.layers.Dense(1, name='vo', activation=None)(layer_3)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -67,22 +66,30 @@ class GomokuModel(TFModelV2):
     def value_function(self):
         return self.value_out
 
+    def policy_variables(self):
+        """Return the list of variables for the policy net."""
+        return list(self.action_net.variables)
+
+    def custom_loss(self, policy_loss, loss_inputs):
+        if 'reg_loss' in self.model_config['custom_options']:
+            for var in self.base_model.variables:
+                if "bias" not in var.name:
+                    policy_loss += self.model_config['custom_options']['reg_loss'] * tf.nn.l2_loss(var)
+            return policy_loss
+
 
 def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
         },
         "custom_action_dist": Categorical,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
 def map_fn(agent_id):
-    if agent_id=="agent_0":
         return "policy_0"
-    elif agent_id=="agent_1":
-        return "policy_1"
 
 def clb_episode_end(info):
     episode = info["episode"]
@@ -94,8 +101,7 @@ def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies":  {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
-            #"policies": {"policy_0": gen_policy(GENV)},
+            "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
             },
         "callbacks":
