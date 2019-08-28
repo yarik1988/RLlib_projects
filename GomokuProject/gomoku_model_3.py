@@ -6,8 +6,6 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
-import pickle
-import os
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -108,16 +106,3 @@ def get_trainer(GENV):
             {"on_episode_end": clb_episode_end},
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
     return trainer
-
-def load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW):
-    model_file = "weights_{}_{}.pickle".format(BOARD_SIZE, NUM_IN_A_ROW)
-    if os.path.isfile(model_file):
-        weights = pickle.load(open(model_file, "rb"))
-        trainer.restore_from_object(weights)
-        print("Model previous state loaded!")
-    return trainer
-
-def save_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW):
-    model_file = "weights_{}_{}.pickle".format(BOARD_SIZE, NUM_IN_A_ROW)
-    weights = trainer.save_to_object()
-    pickle.dump(weights, open(model_file, 'wb'))

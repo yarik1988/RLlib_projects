@@ -3,8 +3,10 @@ import ray
 from ray.rllib.models import ModelCatalog, Model
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
-import gomoku_model
 import time
+import aux_fn
+import gomoku_model_3
+
 
 BOARD_SIZE=3
 NUM_IN_A_ROW=3
@@ -17,10 +19,10 @@ pp = pprint.PrettyPrinter(indent=4)
 
 if len(PC_agents)>0:
     ray.init()
-    ModelCatalog.register_custom_model("GomokuModel",gomoku_model.GomokuModel)
+    ModelCatalog.register_custom_model("GomokuModel", gomoku_model_3.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
-    trainer = gomoku_model.get_trainer(GENV)
-    trainer = gomoku_model.load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
+    trainer = gomoku_model_3.get_trainer(GENV)
+    trainer = aux_fn.load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
 
 obs = GENV.reset()
 cur_action = None
@@ -31,7 +33,7 @@ cur_action = {'agent_0':None,'agent_1':None}
 
 while not done:
     cur_ag = 'agent_{}'.format(int(GENV.parity))
-    policy_ag = gomoku_model.map_fn(cur_ag)
+    policy_ag = gomoku_model_3.map_fn(cur_ag)
     obs_ag = obs[cur_ag]
     rew_ag = None if rew is None else rew['agent_{}'.format(int(GENV.parity))]
     if cur_ag in PC_agents:
