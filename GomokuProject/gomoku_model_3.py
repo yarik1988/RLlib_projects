@@ -7,6 +7,9 @@ from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
 
+BOARD_SIZE=3
+NUM_IN_A_ROW=3
+
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(GomokuModel, self).__init__(obs_space, action_space,num_outputs, model_config, name)

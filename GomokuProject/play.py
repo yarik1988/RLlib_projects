@@ -5,24 +5,21 @@ from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import time
 import aux_fn
-import gomoku_model_3
+import gomoku_model_3 as gm
 
-
-BOARD_SIZE=3
-NUM_IN_A_ROW=3
 
 PC_agents=['agent_0','agent_1']
 PC_agents=['agent_1']
 #PC_agents=[]
-GENV=GomokuEnv.GomokuEnv(BOARD_SIZE,NUM_IN_A_ROW)
+GENV=GomokuEnv.GomokuEnv(gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 pp = pprint.PrettyPrinter(indent=4)
 
 if len(PC_agents)>0:
     ray.init()
-    ModelCatalog.register_custom_model("GomokuModel", gomoku_model_3.GomokuModel)
+    ModelCatalog.register_custom_model("GomokuModel", gm.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
-    trainer = gomoku_model_3.get_trainer(GENV)
-    trainer = aux_fn.load_weights(trainer, BOARD_SIZE, NUM_IN_A_ROW)
+    trainer = gm.get_trainer(GENV)
+    trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 obs = GENV.reset()
 cur_action = None
@@ -33,7 +30,7 @@ cur_action = {'agent_0':None,'agent_1':None}
 
 while not done:
     cur_ag = 'agent_{}'.format(int(GENV.parity))
-    policy_ag = gomoku_model_3.map_fn(cur_ag)
+    policy_ag = gm.map_fn(cur_ag)
     obs_ag = obs[cur_ag]
     rew_ag = None if rew is None else rew['agent_{}'.format(int(GENV.parity))]
     if cur_ag in PC_agents:
@@ -44,7 +41,7 @@ while not done:
     obs, rew, dones, info = GENV.step(action_wrap)
     done=dones["__all__"]
     GENV.render()
-    if len(PC_agents)==2:
+    if len(PC_agents) == 2:
         time.sleep(0.5)
 
 GENV.hmove=None
