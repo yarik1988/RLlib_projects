@@ -39,7 +39,8 @@ class GomokuModel(TFModelV2):
                                          activation=act_fun, kernel_regularizer=regul)(layer_4)
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, filters=1, padding='same',
                                          activation=act_fun, kernel_regularizer=regul)(layer_5)
-        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_5)
+        layer_flat = tf.keras.layers.Flatten()(layer_out)
+        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -89,7 +90,7 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
+            "custom_options": {"use_symmetry": False, "reg_loss": 0.001},
         },
         "custom_action_dist": Categorical,
     }
