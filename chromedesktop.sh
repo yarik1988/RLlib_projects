@@ -6,7 +6,7 @@
 #
 
 function install_desktop_env {
-  PACKAGES="desktop-base xscreensaver"
+  PACKAGES="desktop-base xscreensaver libexo-1-0"
 
   if [[ "$INSTALL_XFCE" != "yes" && "$INSTALL_CINNAMON" != "yes" ]] ; then
     # neither XFCE nor cinnamon specified; install both
