@@ -45,15 +45,15 @@ class GomokuEnv(MultiAgentEnv):
 
         cur_agent = "agent_{}".format(int(self.parity))
         other_agent = "agent_{}".format(int(not self.parity))
-        infos = {cur_agent: {"result": 0}, other_agent: {"result": 0}}
         self.nsteps = self.nsteps + 1
+        infos = {cur_agent: {"result": 0, "nsteps": self.nsteps}, other_agent: {"result": 0, "nsteps": self.nsteps}}
         action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
-        rewards = {"agent_0": 0, "agent_1": 0}
+        rewards = {cur_agent: 0.01, other_agent: 0}
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rewards[cur_agent] = (1 + 2*self.num_in_a_row / self.nsteps)
+                rewards[cur_agent] = (1 + 10*self.num_in_a_row / self.nsteps)
                 rewards[other_agent] = -rewards[cur_agent]
                 infos[cur_agent]["result"] = 1
                 done = True

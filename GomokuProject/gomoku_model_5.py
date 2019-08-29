@@ -104,6 +104,7 @@ def clb_episode_end(info):
     episode = info["episode"]
     episode.custom_metrics["agent_0_win_rate"] = episode.last_info_for("agent_0")["result"]
     episode.custom_metrics["agent_1_win_rate"] = episode.last_info_for("agent_1")["result"]
+    episode.custom_metrics["game_duration"] = episode.last_info_for("agent_0")["nsteps"]
 
 
 def get_trainer(GENV):

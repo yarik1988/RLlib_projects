@@ -22,6 +22,9 @@ while True:
     print("Memory usage = {}".format(mem_info.percent))
     print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
     print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
+    print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
+    print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
+    print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
     if time.time()-start>300:
           print('Weights saving')
           aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
