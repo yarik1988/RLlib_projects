@@ -1,17 +1,16 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import gym
 from gym import spaces
-from gym.envs.classic_control import rendering
 import numpy as np
 import sys
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from itertools import groupby
-import gym
 import pyglet
-from pyglet.gl import *
+from gym.envs.classic_control.rendering import Viewer
 
-class MyViewer(rendering.Viewer):
+class MyViewer(Viewer):
     def __init__(self, width, height, display=None):
         self.labels = []
         super(MyViewer,self).__init__(width, height, display)
@@ -20,7 +19,7 @@ class MyViewer(rendering.Viewer):
         self.labels.append(label)
 
     def render(self, return_rgb_array=False):
-        glClearColor(1,1,1,1)
+        pyglet.gl.glClearColor(1,1,1,1)
         self.window.clear()
         self.window.switch_to()
         self.window.dispatch_events()
@@ -149,6 +148,7 @@ class GomokuEnv(MultiAgentEnv):
         return np.max(dirQ)
 
     def render(self, mode='human'):
+        from gym.envs.classic_control import rendering
         if self.viewer is None:
             self.viewer = MyViewer(GomokuEnv.win_dim_px,GomokuEnv.win_dim_px)
             self.viewer.window.on_mouse_press=self.mouse_press
