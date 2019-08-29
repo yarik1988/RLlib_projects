@@ -10,7 +10,7 @@ import gomoku_model_5 as gm
 
 PC_agents=['agent_0','agent_1']
 PC_agents=['agent_1']
-PC_agents=[]
+#PC_agents=[]
 GENV=GomokuEnv.GomokuEnv(gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 pp = pprint.PrettyPrinter(indent=4)
 

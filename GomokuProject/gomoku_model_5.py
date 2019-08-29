@@ -7,8 +7,8 @@ from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
 
-BOARD_SIZE=10
-NUM_IN_A_ROW=5
+BOARD_SIZE = 10
+NUM_IN_A_ROW = 5
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -18,29 +18,23 @@ class GomokuModel(TFModelV2):
         else:
             self.use_symmetry = False
         act_fun = lambda x: tf.nn.leaky_relu(x, alpha=0.05)
-        regul=tf.keras.regularizers.l2(l=self.model_config['custom_options']['reg_loss'])
         input_shp = obs_space.original_space.spaces['real_obs']
-
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-
         bk_shape = tf.fill(tf.shape(self.inputs), 1.0)
         mrg_inp_bk = tf.concat([self.inputs, bk_shape], axis=3)
-
-        layer_1 = tf.keras.layers.Conv2D(kernel_size=5, filters=128, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(mrg_inp_bk)
-        layer_2 = tf.keras.layers.Conv2D(kernel_size=1, filters=64, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(layer_1)
-        layer_3 = tf.keras.layers.Conv2D(kernel_size=3, filters=32, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(layer_2)
-        layer_4 = tf.keras.layers.Conv2D(kernel_size=3, filters=16, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(layer_3)
-        layer_5 = tf.keras.layers.Conv2D(kernel_size=3, filters=8, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(layer_4)
+        layer_1 = tf.keras.layers.Conv2D(kernel_size=5, filters=64, padding='same',
+                                         activation=act_fun)(mrg_inp_bk)
+        layer_2 = tf.keras.layers.Conv2D(kernel_size=3, filters=32, padding='same',
+                                         activation=act_fun)(layer_1)
+        layer_3 = tf.keras.layers.Conv2D(kernel_size=3, filters=16, padding='same',
+                                         activation=act_fun)(layer_2)
+        layer_4 = tf.keras.layers.Conv2D(kernel_size=3, filters=8, padding='same',
+                                         activation=act_fun)(layer_3)
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, filters=1, padding='same',
-                                         activation=act_fun, kernel_regularizer=regul)(layer_5)
+                                         activation=act_fun)(layer_4)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
-        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
+        value_out = tf.keras.layers.Dense(1, activation=None)(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -79,6 +73,13 @@ class GomokuModel(TFModelV2):
         model_out = model_out+inf_mask
         return model_out, state
 
+    def custom_loss(self, policy_loss, loss_inputs):
+        if 'reg_loss' in self.model_config['custom_options']:
+            for var in self.base_model.variables:
+                if "bias" not in var.name:
+                    policy_loss += self.model_config['custom_options']['reg_loss'] * tf.nn.l2_loss(var)
+            return policy_loss
+
     def value_function(self):
         return self.value_out
 
@@ -90,7 +91,7 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": False, "reg_loss": 0.001},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0.01},
         },
         "custom_action_dist": Categorical,
     }
