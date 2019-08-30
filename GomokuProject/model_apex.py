@@ -76,8 +76,7 @@ class GomokuModel(DistributionalQModel):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
             self.value_out = tf.reshape(self.value_out, [-1])
-        act_mask_bool = tf.dtypes.cast(self.action_mask,tf.bool)
-        model_out = tf.where(act_mask_bool, model_out, tf.fill(tf.shape(model_out), tf.float32.min)+np.float32(1))
+
         return model_out, state
 
     def value_function(self):
@@ -89,8 +88,8 @@ class GomokuModel(DistributionalQModel):
 
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
-
-
+        act_mask_bool = tf.dtypes.cast(self.action_mask, tf.bool)
+        model_out = tf.where(act_mask_bool, model_out, tf.fill(tf.shape(model_out), tf.float32.min))
         return model_out, logits, dist
 
 
@@ -120,7 +119,7 @@ def clb_episode_end(info):
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.dqn.DQNTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
