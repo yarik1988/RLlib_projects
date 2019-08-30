@@ -25,6 +25,7 @@ while True:
     print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
     print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
     print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
+    print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
     if time.time()-start>300:
           print('Weights saving')
           aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)

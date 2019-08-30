@@ -3,7 +3,6 @@ import tensorflow as tf
 import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
-from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.agents.dqn.distributional_q_model import DistributionalQModel
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
@@ -30,24 +29,17 @@ class GomokuModel(DistributionalQModel):
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
         bk_shape = tf.fill(tf.shape(self.inputs), 1.0)
-        mrg_inp_bk = tf.concat([self.inputs, bk_shape], axis=3)
-        layer_1 = tf.keras.layers.Conv2D(kernel_size=5, filters=128, padding='same',
-                                         kernel_regularizer=regul)(mrg_inp_bk)
-        layer_1b = tf.keras.layers.BatchNormalization()(layer_1)
-        layer_1a = tf.keras.layers.Activation(act_fun)(layer_1b)
-        layer_2 = tf.keras.layers.Conv2D(kernel_size=1, filters=32, padding='same',
-                                         kernel_regularizer=regul)(layer_1a)
-        layer_2b = tf.keras.layers.BatchNormalization()(layer_2)
-        layer_2a = tf.keras.layers.Activation(act_fun)(layer_2b)
-        layer_3 = tf.keras.layers.Conv2D(kernel_size=3, filters=16, padding='same',
-                                         kernel_regularizer=regul)(layer_2a)
-        layer_3b = tf.keras.layers.BatchNormalization()(layer_3)
-        layer_3a = tf.keras.layers.Activation(act_fun)(layer_3b)
-        layer_4 = tf.keras.layers.Conv2D(kernel_size=3, filters=8, padding='same',
-                                          kernel_regularizer=regul)(layer_3a)
-        layer_4b = tf.keras.layers.BatchNormalization()(layer_4)
-        layer_4a = tf.keras.layers.Activation(act_fun)(layer_4b)
-        layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(layer_4a)
+        cur_layer = tf.concat([self.inputs, bk_shape], axis=3)
+        kz=[5,1,3,3]
+        filt=[128,32,16,8]
+
+        for i in range(len(kz)):
+            cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
+                                         kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.BatchNormalization(name="Batch_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.Activation(act_fun, name="Act_"+str(i))(cur_layer)
+
+        layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
         value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
@@ -71,6 +63,7 @@ class GomokuModel(DistributionalQModel):
 
     def forward(self, input_dict, state, seq_lens):
         board = input_dict["obs"]["real_obs"]
+        self.action_mask=input_dict["obs"]["action_mask"]
         if self.use_symmetry:
             model_rot_out = [None]*8
             value_out = [None]*8
@@ -83,9 +76,8 @@ class GomokuModel(DistributionalQModel):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
             self.value_out = tf.reshape(self.value_out, [-1])
-
-        inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        model_out = model_out+inf_mask
+        act_mask_bool = tf.dtypes.cast(self.action_mask,tf.bool)
+        model_out = tf.where(act_mask_bool, model_out, tf.fill(tf.shape(model_out), tf.float32.min)+np.float32(1))
         return model_out, state
 
     def value_function(self):
@@ -95,15 +87,22 @@ class GomokuModel(DistributionalQModel):
         """Return the list of variables for the policy net."""
         return list(self.action_net.variables)
 
+    def get_q_value_distributions(self, model_out):
+        model_out, logits, dist = self.q_value_head(model_out)
+
+
+        return model_out, logits, dist
+
+
 def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": False, "reg_loss": 0.001},
-
+            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
+            "vf_share_layers": True,
         },
         "hiddens": [],
-        "custom_action_dist": Categorical,
+        "dueling": False,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
@@ -114,12 +113,14 @@ def clb_episode_end(info):
     episode = info["episode"]
     episode.custom_metrics["agent_0_win_rate"] = episode.last_info_for("agent_0")["result"]
     episode.custom_metrics["agent_1_win_rate"] = episode.last_info_for("agent_1")["result"]
-    episode.custom_metrics["game_duration"] = episode.last_info_for("agent_0")["nsteps"]
-
+    episode.custom_metrics["game_duration"] = episode.last_info_for("agent_0")["nsteps"]\
+                                              +episode.last_info_for("agent_1")["nsteps"]
+    episode.custom_metrics["wrong_moves"] = episode.last_info_for("agent_0")["wrong_moves"]\
+                                            +episode.last_info_for("agent_1")["wrong_moves"]
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.dqn.DQNTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,

@@ -16,7 +16,7 @@ class GomokuEnv(MultiAgentEnv):
         self.board_size = board_size
         self.num_in_a_row=num_in_a_row
         self.obs_shape = (self.board_size, self.board_size, 1)  # board_size * board_size
-
+        self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
         self.observation_space = spaces.Dict({
             "real_obs": spaces.Box(-np.ones(self.obs_shape), np.ones(self.obs_shape)),
             "action_mask": spaces.Box(np.zeros(self.board_size**2), np.ones(self.board_size**2), dtype=bool)})
@@ -31,6 +31,7 @@ class GomokuEnv(MultiAgentEnv):
         return np.expand_dims(board, axis=2)
 
     def reset(self):
+        self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
         self.parity = False
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
@@ -45,8 +46,8 @@ class GomokuEnv(MultiAgentEnv):
 
         cur_agent = "agent_{}".format(int(self.parity))
         other_agent = "agent_{}".format(int(not self.parity))
-        self.nsteps = self.nsteps + 1
-        infos = {cur_agent: {"result": 0, "nsteps": self.nsteps}, other_agent: {"result": 0, "nsteps": self.nsteps}}
+        self.infos[cur_agent]['nsteps'] += 1
+        self.nsteps = self.infos[cur_agent]['nsteps']+self.infos[other_agent]['nsteps']
         action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
         rewards = {cur_agent: 0.01, other_agent: 0}
@@ -55,7 +56,7 @@ class GomokuEnv(MultiAgentEnv):
             if self.check_five(self.new_move):
                 rewards[cur_agent] = (1 + 10*self.num_in_a_row / self.nsteps)
                 rewards[other_agent] = -rewards[cur_agent]
-                infos[cur_agent]["result"] = 1
+                self.infos[cur_agent]["result"] = 1
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
                 rewards[cur_agent] = 0
@@ -63,6 +64,7 @@ class GomokuEnv(MultiAgentEnv):
                 done = True
         else:
             rewards[cur_agent] = -1  # Incorrect move. Penalty
+            self.infos[cur_agent]["wrong_moves"] += 1
             self.new_move = None
 
         self.parity = not self.parity
@@ -72,7 +74,7 @@ class GomokuEnv(MultiAgentEnv):
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}
 
-        return obs, rewards, dones, infos
+        return obs, rewards, dones, self.infos
 
 
     def query_isfive(self, arr, color):

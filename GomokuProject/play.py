@@ -40,6 +40,7 @@ while not done:
     action_wrap = {cur_ag: cur_action[cur_ag]}
     obs, rew, dones, info = GENV.step(action_wrap)
     done=dones["__all__"]
+    print(info['agent_0']['wrong_moves']+info['agent_1']['wrong_moves'])
     GENV.render()
     if len(PC_agents) == 2:
         time.sleep(0.5)
