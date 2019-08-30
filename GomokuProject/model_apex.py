@@ -63,6 +63,7 @@ class GomokuModel(DistributionalQModel):
 
     def forward(self, input_dict, state, seq_lens):
         board = input_dict["obs"]["real_obs"]
+        self.action_mask = input_dict["obs"]["action_mask"]
         if self.use_symmetry:
             model_rot_out = [None]*8
             value_out = [None]*8
@@ -75,8 +76,7 @@ class GomokuModel(DistributionalQModel):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
             self.value_out = tf.reshape(self.value_out, [-1])
-        inf_mask = tf.maximum(tf.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        return model_out+inf_mask, state
+        return model_out, state
 
     def value_function(self):
         return self.value_out
@@ -87,7 +87,8 @@ class GomokuModel(DistributionalQModel):
 
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
-        return model_out, logits, dist
+        inf_mask = tf.maximum(tf.log(self.action_mask), tf.float32.min)
+        return model_out+inf_mask, logits, dist
 
 
 def gen_policy(GENV):
@@ -98,7 +99,7 @@ def gen_policy(GENV):
             "vf_share_layers": False,
         },
         "hiddens": [],
-        "dueling": False,
+        "dueling": True,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
