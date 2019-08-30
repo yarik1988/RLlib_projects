@@ -6,7 +6,7 @@ import time
 import pprint
 import psutil
 import aux_fn
-import gomoku_model_5 as gm
+import model_apex as gm
 
 ray.init()
 GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
