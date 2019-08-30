@@ -28,11 +28,11 @@ class GomokuModel(DistributionalQModel):
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-        bk_shape = tf.fill(tf.shape(self.inputs), 1.0)
-        cur_layer = tf.concat([self.inputs, bk_shape], axis=3)
+        can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
+        cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
+
         kz=[5,1,3,3]
         filt=[128,32,16,8]
-
         for i in range(len(kz)):
             cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                          kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
@@ -63,7 +63,6 @@ class GomokuModel(DistributionalQModel):
 
     def forward(self, input_dict, state, seq_lens):
         board = input_dict["obs"]["real_obs"]
-        self.action_mask=input_dict["obs"]["action_mask"]
         if self.use_symmetry:
             model_rot_out = [None]*8
             value_out = [None]*8
@@ -76,8 +75,8 @@ class GomokuModel(DistributionalQModel):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
             self.value_out = tf.reshape(self.value_out, [-1])
-
-        return model_out, state
+        inf_mask = tf.maximum(tf.log(input_dict["obs"]["action_mask"]), tf.float32.min)
+        return model_out+inf_mask, state
 
     def value_function(self):
         return self.value_out
@@ -88,8 +87,6 @@ class GomokuModel(DistributionalQModel):
 
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
-        act_mask_bool = tf.dtypes.cast(self.action_mask, tf.bool)
-        model_out = tf.where(act_mask_bool, model_out, tf.fill(tf.shape(model_out), tf.float32.min))
         return model_out, logits, dist
 
 
@@ -98,7 +95,7 @@ def gen_policy(GENV):
         "model": {
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
-            "vf_share_layers": True,
+            "vf_share_layers": False,
         },
         "hiddens": [],
         "dueling": False,
@@ -119,7 +116,7 @@ def clb_episode_end(info):
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.dqn.DQNTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,

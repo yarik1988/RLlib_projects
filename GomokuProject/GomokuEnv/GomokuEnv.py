@@ -36,7 +36,7 @@ class GomokuEnv(MultiAgentEnv):
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
         obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ones(self.board_size**2)}
-        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.zeros(self.board_size**2)}
+        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.ones(self.board_size**2)}
 
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         return obs
@@ -68,9 +68,8 @@ class GomokuEnv(MultiAgentEnv):
             self.new_move = None
 
         self.parity = not self.parity
-        mask_act = {other_agent: np.ndarray.flatten(self.board == 0), cur_agent: np.zeros(self.board_size**2)}
-        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  mask_act['agent_0']}
-        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": mask_act['agent_1']}
+        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ndarray.flatten(self.board == 0)}
+        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.ndarray.flatten(self.board == 0)}
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}
 
