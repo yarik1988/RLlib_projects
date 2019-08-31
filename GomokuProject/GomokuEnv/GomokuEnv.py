@@ -67,9 +67,13 @@ class GomokuEnv(MultiAgentEnv):
             self.infos[cur_agent]["wrong_moves"] += 1
             self.new_move = None
 
+        if np.any(self.board == 0):
+           act_mask=np.ndarray.flatten(self.board == 0)
+        else:
+           act_mask=np.ones(self.board_size**2)
         self.parity = not self.parity
-        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ndarray.flatten(self.board == 0)}
-        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": np.ndarray.flatten(self.board == 0)}
+        obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  act_mask}
+        obs_agent_1 = {"real_obs": self.cook_obs(-self.board), "action_mask": act_mask}
         obs = {"agent_0": obs_agent_0, "agent_1": obs_agent_1}
         dones = {"__all__": done}
 

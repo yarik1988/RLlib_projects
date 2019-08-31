@@ -9,7 +9,7 @@ import model_apex as gm
 
 
 PC_agents=['agent_0','agent_1']
-#PC_agents=['agent_1']
+PC_agents=['agent_1']
 #PC_agents=[]
 GENV=GomokuEnv.GomokuEnv(gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 pp = pprint.PrettyPrinter(indent=4)
@@ -40,7 +40,6 @@ while not done:
     action_wrap = {cur_ag: cur_action[cur_ag]}
     obs, rew, dones, info = GENV.step(action_wrap)
     done=dones["__all__"]
-    print(info['agent_0']['wrong_moves']+info['agent_1']['wrong_moves'])
     GENV.render()
     if len(PC_agents) == 2:
         time.sleep(0.5)
