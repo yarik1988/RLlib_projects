@@ -99,7 +99,6 @@ def gen_policy(GENV):
             "vf_share_layers": False,
         },
         "hiddens": [],
-        "dueling": True,
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
@@ -117,7 +116,7 @@ def clb_episode_end(info):
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.dqn.DQNTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
