@@ -54,8 +54,8 @@ class GomokuEnv(MultiAgentEnv):
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rewards[cur_agent] = 5
-                rewards[other_agent] = -5
+                rewards[cur_agent] = 5+10*self.num_in_a_row/self.nsteps
+                rewards[other_agent] = -rewards[cur_agent]
                 self.infos[cur_agent]["result"] = 1
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone

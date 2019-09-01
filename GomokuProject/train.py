@@ -13,13 +13,18 @@ GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
 trainer = gm.get_trainer(GENV)
 trainer = aux_fn.load_weights(trainer,gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
-
+cur_config = trainer.get_config()
+trainer.config=cur_config
 start = time.time()
 pp = pprint.PrettyPrinter(indent=4)
+
+
 while True:
     rest = trainer.train()
     mem_info = psutil.virtual_memory()
     print("Memory usage = {}".format(mem_info.percent))
+    print("First policy learning rate={}".format(rest['info']['learner']['policy_0']['cur_lr']))
+    print("Second policy learning rate={}".format(rest['info']['learner']['policy_1']['cur_lr']))
     if 'agent_0_win_rate_mean' in rest['custom_metrics']:
         print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
     if 'agent_1_win_rate_mean' in rest['custom_metrics']:

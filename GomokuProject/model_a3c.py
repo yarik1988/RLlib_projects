@@ -34,7 +34,7 @@ class GomokuModel(TFModelV2):
 
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
-        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, activity_regularizer=tf.keras.regularizers.l2(0.1))(layer_flat)
+        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
@@ -80,18 +80,22 @@ class GomokuModel(TFModelV2):
         """Return the list of variables for the policy net."""
         return list(self.action_net.variables)
 
-def gen_policy(GENV):
+def gen_policy(GENV, lr=0.001):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True, "reg_loss": 0},
         },
         "custom_action_dist": Categorical,
+        "lr": lr
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
 def map_fn(agent_id):
+    if agent_id=='agent_0':
         return "policy_0"
+    else:
+        return "policy_1"
 
 def clb_episode_end(info):
     episode = info["episode"]
@@ -104,7 +108,7 @@ def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_0": gen_policy(GENV)},
+            "policies": {"policy_0": gen_policy(GENV, lr = 0.001), "policy_1": gen_policy(GENV,lr=0)},
             "policy_mapping_fn": map_fn,
             },
         "callbacks":
