@@ -36,7 +36,7 @@ class GomokuModel(DistributionalQModel):
             cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                          kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
             cur_layer = tf.keras.layers.BatchNormalization(name="Batch_"+str(i))(cur_layer)
-            cur_layer = tf.keras.layers.PReLU(name="Act_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.Activation(tf.nn.elu,name="Act_"+str(i))(cur_layer)
 
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
@@ -94,7 +94,7 @@ def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0},
             "vf_share_layers": True,
         },
         "hiddens": [],
