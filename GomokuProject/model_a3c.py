@@ -17,30 +17,22 @@ class GomokuModel(TFModelV2):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
-        act_fun = lambda x: tf.nn.leaky_relu(x, alpha=0.05)
-        regul=tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
+        regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
-        bk_shape = tf.fill(tf.shape(self.inputs), 1.0)
-        mrg_inp_bk = tf.concat([self.inputs, bk_shape], axis=3)
-        layer_1 = tf.keras.layers.Conv2D(kernel_size=5, filters=128, padding='same',
-                                         kernel_regularizer=regul)(mrg_inp_bk)
-        layer_1b = tf.keras.layers.BatchNormalization()(layer_1)
-        layer_1a = tf.keras.layers.Activation(act_fun)(layer_1b)
-        layer_2 = tf.keras.layers.Conv2D(kernel_size=1, filters=32, padding='same',
-                                         kernel_regularizer=regul)(layer_1a)
-        layer_2b = tf.keras.layers.BatchNormalization()(layer_2)
-        layer_2a = tf.keras.layers.Activation(act_fun)(layer_2b)
-        layer_3 = tf.keras.layers.Conv2D(kernel_size=3, filters=16, padding='same',
-                                         kernel_regularizer=regul)(layer_2a)
-        layer_3b = tf.keras.layers.BatchNormalization()(layer_3)
-        layer_3a = tf.keras.layers.Activation(act_fun)(layer_3b)
-        layer_4 = tf.keras.layers.Conv2D(kernel_size=3, filters=8, padding='same',
-                                          kernel_regularizer=regul)(layer_3a)
-        layer_4b = tf.keras.layers.BatchNormalization()(layer_4)
-        layer_4a = tf.keras.layers.Activation(act_fun)(layer_4b)
-        layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(layer_4a)
+        can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
+        cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
+
+        kz=[5,1,3,3]
+        filt=[128,32,16,8]
+        for i in range(len(kz)):
+            cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
+                                         kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.BatchNormalization(name="Batch_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.PReLU(name="Act_"+str(i))(cur_layer)
+
+        layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
         value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
@@ -110,7 +102,7 @@ def clb_episode_end(info):
 
 def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
-    trainer = ray.rllib.agents.ppo.APPOTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
