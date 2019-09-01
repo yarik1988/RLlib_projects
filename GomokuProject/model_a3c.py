@@ -34,7 +34,7 @@ class GomokuModel(TFModelV2):
 
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
-        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
+        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, activity_regularizer=tf.keras.regularizers.l2(0.1))(layer_flat)
         self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
         self.base_model.summary()
         self.register_variables(self.base_model.variables)
