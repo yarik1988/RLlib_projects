@@ -23,8 +23,7 @@ class GomokuModel(DistributionalQModel):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
-        act_fun = lambda x: tf.nn.leaky_relu(x, alpha=0.05)
-        regul=tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
+        regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
         input_shp = obs_space.original_space.spaces['real_obs']
         self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
         self.outputs = int(np.sqrt(num_outputs))
@@ -37,7 +36,7 @@ class GomokuModel(DistributionalQModel):
             cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                          kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
             cur_layer = tf.keras.layers.BatchNormalization(name="Batch_"+str(i))(cur_layer)
-            cur_layer = tf.keras.layers.Activation(act_fun, name="Act_"+str(i))(cur_layer)
+            cur_layer = tf.keras.layers.PReLU(name="Act_"+str(i))(cur_layer)
 
         layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
         layer_flat = tf.keras.layers.Flatten()(layer_out)
@@ -121,6 +120,7 @@ def get_trainer(GENV):
             "policies": {"policy_0": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
             },
+        "num_workers": 8,
         "callbacks":
             {"on_episode_end": clb_episode_end},
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))

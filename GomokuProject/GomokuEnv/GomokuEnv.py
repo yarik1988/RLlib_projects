@@ -50,17 +50,17 @@ class GomokuEnv(MultiAgentEnv):
         self.nsteps = self.infos[cur_agent]['nsteps']+self.infos[other_agent]['nsteps']
         action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
-        rewards = {cur_agent: 0, other_agent: 0}
+        rewards = {cur_agent: 0.01, other_agent: 0}
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rewards[cur_agent] = (1 + 10*self.num_in_a_row / self.nsteps)
-                rewards[other_agent] = -rewards[cur_agent]
+                rewards[cur_agent] = 5
+                rewards[other_agent] = -5
                 self.infos[cur_agent]["result"] = 1
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
-                rewards[cur_agent] = 0
-                rewards[other_agent] = 0
+                rewards[cur_agent] = 1
+                rewards[other_agent] = 1
                 done = True
         else:
             rewards[cur_agent] = -1  # Incorrect move. Penalty
