@@ -95,7 +95,7 @@ def gen_policy(GENV):
         "model": {
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
-            "vf_share_layers": False,
+            "vf_share_layers": True,
         },
         "hiddens": [],
     }

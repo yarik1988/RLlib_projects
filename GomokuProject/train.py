@@ -20,12 +20,18 @@ while True:
     rest = trainer.train()
     mem_info = psutil.virtual_memory()
     print("Memory usage = {}".format(mem_info.percent))
-    print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
-    print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
-    print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
-    print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
-    print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
-    print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
+    if 'agent_0_win_rate_mean' in rest['custom_metrics']:
+        print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
+    if 'agent_1_win_rate_mean' in rest['custom_metrics']:
+        print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
+    if 'game_duration_min' in rest['custom_metrics']:
+        print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
+    if 'game_duration_mean' in rest['custom_metrics']:
+        print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
+    if 'game_duration_max' in rest['custom_metrics']:
+        print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
+    if 'wrong_moves_mean' in rest['custom_metrics']:
+        print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
     if time.time()-start>300:
           print('Weights saving')
           aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
