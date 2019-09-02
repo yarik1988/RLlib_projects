@@ -109,7 +109,7 @@ def get_trainer(GENV,np):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_0": gen_policy(GENV) for i in range(np)},
+            "policies": {"policy_{}".format(i): gen_policy(GENV,i) for i in range(np)},
             "policy_mapping_fn": mf,
             },
         "num_workers": 8,

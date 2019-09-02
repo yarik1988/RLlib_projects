@@ -23,7 +23,3 @@ def clb_episode_end(info):
                                             + episode.last_info_for("agent_1")["wrong_moves"]
 
 
-def change_active_policy(trainer, policy):
-    new_config = trainer.get_config()
-    new_config['multiagent']["policies_to_train"] = [policy]
-    trainer._setup(new_config)

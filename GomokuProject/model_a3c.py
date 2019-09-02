@@ -1,15 +1,19 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-import tensorflow as tf
 import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
+from ray.rllib.utils import try_import_tf
 import numpy as np
 import aux_fn
-
+tf = try_import_tf()
 BOARD_SIZE = 10
 NUM_IN_A_ROW = 5
+
+
+global_outv = tf.keras.layers.Dense(1, activation=None, name='OutV')
+
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -18,27 +22,30 @@ class GomokuModel(TFModelV2):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
-        regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
-        input_shp = obs_space.original_space.spaces['real_obs']
-        self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
-        self.outputs = int(np.sqrt(num_outputs))
-        can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
-        cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
+        with tf.get_default_graph().as_default():
+            input_shp = obs_space.original_space.spaces['real_obs']
+            self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
+            self.outputs = int(np.sqrt(num_outputs))
+            can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
+            cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
 
-        kz=[5,1,3,3]
-        filt=[128,32,16,8]
-        for i in range(len(kz)):
-            cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
-                                         kernel_regularizer=regul,name="Conv_"+str(i))(cur_layer)
-            cur_layer = tf.keras.layers.BatchNormalization(name="Batch_"+str(i))(cur_layer)
-            cur_layer = tf.keras.layers.Activation(tf.nn.elu,name="Act_"+str(i))(cur_layer)
+            kz = [5, 1, 3, 3]
+            filt = [128, 32, 16, 8]
+            regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
+            for i in range(len(kz)):
+                cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
+                                                   kernel_regularizer=regul, name="Conv_" + str(i))(cur_layer)
+                cur_layer = tf.keras.layers.BatchNormalization(name="Batch_" + str(i))(cur_layer)
+                cur_layer = tf.keras.layers.Activation(tf.nn.elu, name="Act_" + str(i))(cur_layer)
 
-        layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(cur_layer)
-        layer_flat = tf.keras.layers.Flatten()(layer_out)
-        value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
-        self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
-        self.base_model.summary()
-        self.register_variables(self.base_model.variables)
+            layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(
+                cur_layer)
+            layer_flat = tf.keras.layers.Flatten()(layer_out)
+            #value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
+            value_out=global_outv(layer_flat)
+            self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
+            self.base_model.summary()
+            self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
         board_tmp = tf.identity(board)
@@ -81,7 +88,7 @@ class GomokuModel(TFModelV2):
         """Return the list of variables for the policy net."""
         return list(self.action_net.variables)
 
-def gen_policy(GENV):
+def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
@@ -90,7 +97,7 @@ def gen_policy(GENV):
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
-def get_trainer(GENV,np):
+def get_trainer(GENV,np,policies_train = None):
     if np == 1:
        mf = lambda agent_id: "policy_0"
     else:
@@ -98,8 +105,9 @@ def get_trainer(GENV,np):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
+            "policies": {"policy_{}".format(i): gen_policy(GENV,i) for i in range(np)},
             "policy_mapping_fn": mf,
+            "policies_to_train": policies_train,
             },
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},
