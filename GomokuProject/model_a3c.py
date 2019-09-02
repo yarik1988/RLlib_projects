@@ -5,6 +5,7 @@ from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
+from ray.rllib.utils.schedules import ConstantSchedule
 import numpy as np
 
 BOARD_SIZE = 10
@@ -80,14 +81,14 @@ class GomokuModel(TFModelV2):
         """Return the list of variables for the policy net."""
         return list(self.action_net.variables)
 
-def gen_policy(GENV, lr=0.001):
+def gen_policy(GENV,lr=0.005):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
             "custom_options": {"use_symmetry": True, "reg_loss": 0},
         },
-        "custom_action_dist": Categorical,
-        "lr": lr
+        "cur_lr": lr,
+        "lr_schedule": [[lr]],
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
@@ -108,7 +109,7 @@ def get_trainer(GENV):
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_0": gen_policy(GENV, lr = 0.001), "policy_1": gen_policy(GENV,lr=0)},
+            "policies": {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
             "policy_mapping_fn": map_fn,
             },
         "callbacks":

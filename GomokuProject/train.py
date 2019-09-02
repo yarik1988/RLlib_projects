@@ -13,11 +13,11 @@ GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
 trainer = gm.get_trainer(GENV)
 trainer = aux_fn.load_weights(trainer,gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
-cur_config = trainer.get_config()
-trainer.config=cur_config
 start = time.time()
 pp = pprint.PrettyPrinter(indent=4)
-
+new_config = trainer.get_config()
+new_config['multiagent']['policies']['policy_0'] = gm.gen_policy(GENV, lr=0.0123)
+trainer._setup(new_config)
 
 while True:
     rest = trainer.train()
