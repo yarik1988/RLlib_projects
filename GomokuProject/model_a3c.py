@@ -5,15 +5,14 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
 from ray.rllib.utils import try_import_tf
+tf=try_import_tf()
 import numpy as np
 import aux_fn
-tf = try_import_tf()
+
 BOARD_SIZE = 10
 NUM_IN_A_ROW = 5
 
-
-global_outv = tf.keras.layers.Dense(1, activation=None, name='OutV')
-
+dns=tf.keras.layers.Dense(1, activation=None, name='OutV')
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -22,7 +21,10 @@ class GomokuModel(TFModelV2):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
-        with tf.get_default_graph().as_default():
+        with tf.variable_scope(
+                tf.VariableScope(tf.AUTO_REUSE, "shared"),
+                reuse=tf.AUTO_REUSE,
+                auxiliary_name_scope=False):
             input_shp = obs_space.original_space.spaces['real_obs']
             self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
             self.outputs = int(np.sqrt(num_outputs))
@@ -38,13 +40,12 @@ class GomokuModel(TFModelV2):
                 cur_layer = tf.keras.layers.BatchNormalization(name="Batch_" + str(i))(cur_layer)
                 cur_layer = tf.keras.layers.Activation(tf.nn.elu, name="Act_" + str(i))(cur_layer)
 
-            layer_out = tf.keras.layers.Conv2D(kernel_size=3, kernel_regularizer=regul, filters=1, padding='same')(
-                cur_layer)
-            layer_flat = tf.keras.layers.Flatten()(layer_out)
-            #value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul)(layer_flat)
-            value_out=global_outv(layer_flat)
-            self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
-            self.base_model.summary()
+            layer_out = tf.keras.layers.Conv2D(kernel_size=3,filters=1,padding='same',
+                                               kernel_regularizer=regul, name='Out')(cur_layer)
+            layer_flat = tf.keras.layers.Flatten(name='FlatFin')(layer_out)
+            value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, name='OutV')(layer_flat)
+            global_model = tf.keras.Model(self.inputs, [layer_out, value_out])
+            self.base_model = global_model
             self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
@@ -97,7 +98,9 @@ def gen_policy(GENV, i):
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
-def get_trainer(GENV,np,policies_train = None):
+def get_trainer(GENV, np, policies_train=None):
+    if policies_train is None:
+        policies_train = ["policy_0"]
     if np == 1:
        mf = lambda agent_id: "policy_0"
     else:

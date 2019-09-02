@@ -12,14 +12,13 @@ num_policies=2
 ray.init()
 GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
-trainer = gm.get_trainer(GENV,num_policies)
+trainer = gm.get_trainer(GENV,num_policies,['policy_0'])
 trainer = aux_fn.load_weights(trainer,gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 
 start = time.time()
 pp = pprint.PrettyPrinter(indent=4)
 if num_policies>1:
     cur_switch=False
-    aux_fn.change_active_policy(trainer,"policy_{}".format(int(cur_switch)))
     subepoch_count = 0
 
 while True:
@@ -47,10 +46,10 @@ while True:
         print("Subepoch count = {}".format(subepoch_count))
         ohter_ag = 'agent_{}_win_rate_mean'.format((int(not cur_switch)))
         other_ag_win = rest['custom_metrics'][ohter_ag]
-        if (other_ag_win < 0.05 and subepoch_count > 50) or subepoch_count > 400:
+        if (other_ag_win < 1.05 and subepoch_count > 5) or subepoch_count > 400:
             print("Change learning policy. Restarting trainer")
             cur_switch = not cur_switch
-            state = trainer.save()
+            state = trainer.save(".")
             trainer.stop()
             trainer = gm.get_trainer(GENV, num_policies,["policy_{}".format(int(cur_switch))])
             trainer.restore(state)
