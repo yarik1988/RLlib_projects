@@ -5,8 +5,8 @@ from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
-from ray.rllib.utils.schedules import ConstantSchedule
 import numpy as np
+import aux_fn
 
 BOARD_SIZE = 10
 NUM_IN_A_ROW = 5
@@ -81,38 +81,29 @@ class GomokuModel(TFModelV2):
         """Return the list of variables for the policy net."""
         return list(self.action_net.variables)
 
-def gen_policy(GENV,lr=0.005):
+def gen_policy(GENV):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True, "reg_loss": 0},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
         },
-        "cur_lr": lr,
-        "lr_schedule": [[lr]],
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
-def map_fn(agent_id):
-    if agent_id=='agent_0':
-        return "policy_0"
+def get_trainer(GENV,np):
+    if np == 1:
+       mf = lambda agent_id: "policy_0"
     else:
-        return "policy_1"
-
-def clb_episode_end(info):
-    episode = info["episode"]
-    episode.custom_metrics["agent_0_win_rate"] = episode.last_info_for("agent_0")["result"]
-    episode.custom_metrics["agent_1_win_rate"] = episode.last_info_for("agent_1")["result"]
-    episode.custom_metrics["game_duration"] = episode.last_info_for("agent_0")["nsteps"]+episode.last_info_for("agent_1")["nsteps"]
-
-
-def get_trainer(GENV):
+       mf = lambda agent_id: "policy_0" if agent_id=='agent_0' else "policy_1"
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_0": gen_policy(GENV), "policy_1": gen_policy(GENV)},
-            "policy_mapping_fn": map_fn,
+            "policy_mapping_fn": mf,
             },
         "callbacks":
-            {"on_episode_end": clb_episode_end},
+            {"on_episode_end": aux_fn.clb_episode_end},
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
     return trainer
+
+

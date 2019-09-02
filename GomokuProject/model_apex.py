@@ -6,6 +6,7 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.agents.dqn.distributional_q_model import DistributionalQModel
 from ray.rllib.models.tf.tf_action_dist import *
 import numpy as np
+import aux_fn
 
 BOARD_SIZE = 10
 NUM_IN_A_ROW = 5
@@ -100,27 +101,19 @@ def gen_policy(GENV):
     }
     return (None, GENV.observation_space, GENV.action_space, config)
 
-def map_fn(agent_id):
-        return "policy_0"
-
-def clb_episode_end(info):
-    episode = info["episode"]
-    episode.custom_metrics["agent_0_win_rate"] = episode.last_info_for("agent_0")["result"]
-    episode.custom_metrics["agent_1_win_rate"] = episode.last_info_for("agent_1")["result"]
-    episode.custom_metrics["game_duration"] = episode.last_info_for("agent_0")["nsteps"]\
-                                              +episode.last_info_for("agent_1")["nsteps"]
-    episode.custom_metrics["wrong_moves"] = episode.last_info_for("agent_0")["wrong_moves"]\
-                                            +episode.last_info_for("agent_1")["wrong_moves"]
-
-def get_trainer(GENV):
+def get_trainer(GENV,np):
+    if np == 1:
+       mf = lambda agent_id: "policy_0"
+    else:
+       mf = lambda agent_id: "policy_0" if agent_id=='agent_0' else "policy_1"
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
         "multiagent": {
-            "policies": {"policy_0": gen_policy(GENV)},
-            "policy_mapping_fn": map_fn,
+            "policies": {"policy_0": gen_policy(GENV) for i in range(np)},
+            "policy_mapping_fn": mf,
             },
         "num_workers": 8,
         "callbacks":
-            {"on_episode_end": clb_episode_end},
+            {"on_episode_end": aux_fn.clb_episode_end},
     }, logger_creator=lambda _: ray.tune.logger.NoopLogger({}, None))
     return trainer

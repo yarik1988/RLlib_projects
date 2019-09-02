@@ -5,7 +5,7 @@ from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import time
 import aux_fn
-import model_apex as gm
+import model_a3c as gm
 
 
 PC_agents=['agent_0','agent_1']
