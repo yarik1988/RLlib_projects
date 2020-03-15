@@ -36,8 +36,8 @@ class GomokuModel(TFModelV2):
             for i in range(len(kz)):
                 cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                                    kernel_regularizer=regul, name="Conv_" + str(i))(cur_layer)
-                #cur_layer = tf.keras.layers.BatchNormalization(name="Batch_" + str(i))(cur_layer)
-                cur_layer = tf.keras.layers.Activation(tf.nn.sigmoid, name="Act_" + str(i))(cur_layer)
+                cur_layer = tf.keras.layers.BatchNormalization(name="Batch_" + str(i))(cur_layer)
+                cur_layer = tf.keras.layers.Activation(tf.nn.elu, name="Act_" + str(i))(cur_layer)
 
             layer_out = tf.keras.layers.Conv2D(kernel_size=3, filters=1, padding='same',
                                                kernel_regularizer=regul, name='Out', activation=tf.nn.sigmoid)(cur_layer)
@@ -93,7 +93,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": 'GomokuModel',
-            "custom_options": {"use_symmetry": True, "reg_loss": 0},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0.001},
         },
     }
     return (None, GENV.observation_space, GENV.action_space, config)
@@ -106,12 +106,15 @@ def map_fn(np):
         return lambda agent_id: "policy_0" if agent_id == 'agent_0' else "policy_1"
 
 
-def get_trainer(GENV, np):
+def get_trainer(GENV, np, policies_train = None):
+    if policies_train is None:
+        policies_train = ["policy_0"]
     ModelCatalog.register_custom_model("GomokuModel", GomokuModel)
     trainer = ray.rllib.agents.a3c.A3CTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_{}".format(i): gen_policy(GENV,i) for i in range(np)},
             "policy_mapping_fn": map_fn(np),
+            "policies_to_train": policies_train,
             },
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},

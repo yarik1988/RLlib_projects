@@ -18,7 +18,7 @@ if len(PC_agents)>0:
     ray.init()
     ModelCatalog.register_custom_model("GomokuModel", gm.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
-    trainer = gm.get_trainer(GENV)
+    trainer = gm.get_trainer(GENV,1, ['policy_0'])
     trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 obs = GENV.reset()
@@ -30,7 +30,7 @@ cur_action = {'agent_0':None,'agent_1':None}
 
 while not done:
     cur_ag = 'agent_{}'.format(int(GENV.parity))
-    policy_ag = gm.map_fn(cur_ag)
+    policy_ag = (gm.map_fn(1))(cur_ag)
     obs_ag = obs[cur_ag]
     rew_ag = None if rew is None else rew['agent_{}'.format(int(GENV.parity))]
     if cur_ag in PC_agents:

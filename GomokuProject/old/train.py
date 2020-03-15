@@ -7,16 +7,19 @@ import pprint
 import psutil
 import aux_fn
 import model_a3c as gm
-num_policies = 1
+num_policies=1
 
 ray.init()
 GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
-trainer = gm.get_trainer(GENV, num_policies)
+trainer = gm.get_trainer(GENV, num_policies, ['policy_0'])
 trainer = aux_fn.load_weights(trainer,gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 
 start = time.time()
 pp = pprint.PrettyPrinter(indent=4)
+if num_policies>1:
+    cur_switch=False
+    subepoch_count = 0
 
 while True:
     rest = trainer.train()
@@ -33,18 +36,24 @@ while True:
     print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
     print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
     if time.time()-start>300:
-        print('Weights saving')
-        aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
-        start = time.time()
-    if mem_info.percent > 90:
-        print("Restarting trainer")
-        state = trainer.save(".")
-        trainer.stop()
-        trainer = gm.get_trainer(GENV, num_policies, ["policy_{}".format(int(cur_switch))])
-        trainer.restore(state)
-
-    if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+          print('Weights saving')
+          aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
+          start = time.time()
+    if mem_info.percent > 90 or sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
         break
+    if num_policies >1:
+        subepoch_count += 1
+        print("Subepoch count = {}".format(subepoch_count))
+        ohter_ag = 'agent_{}_win_rate_mean'.format((int(not cur_switch)))
+        other_ag_win = rest['custom_metrics'][ohter_ag]
+        if (other_ag_win < 1.05 and subepoch_count > 5) or subepoch_count > 400:
+            print("Change learning policy. Restarting trainer")
+            cur_switch = not cur_switch
+            state = trainer.save(".")
+            trainer.stop()
+            trainer = gm.get_trainer(GENV, num_policies,["policy_{}".format(int(cur_switch))])
+            trainer.restore(state)
+            subepoch_count = 0
 
 aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 ray.shutdown()
