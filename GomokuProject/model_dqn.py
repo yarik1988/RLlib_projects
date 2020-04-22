@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import tensorflow as tf
+from tensorflow.keras.utils import plot_model
 import ray
 from ray import tune
 from ray.rllib.models import ModelCatalog
@@ -106,4 +107,7 @@ def get_trainer(GENV, np):
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},
     })
+    print(trainer.get_policy("policy_0").model.base_model.summary())
+    qmodel = trainer.get_policy("policy_0").model.q_value_head
+    plot_model(qmodel, show_shapes=True, show_layer_names=True)
     return trainer

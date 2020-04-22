@@ -5,20 +5,15 @@ from GomokuEnv import GomokuEnv
 import time
 import pprint
 import psutil
-from tensorflow.keras.utils import plot_model
+
 import aux_fn
-import model_dqn as gm
+import model_a3c as gm
 num_policies = 2
 
 ray.init()
 GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
 trainer = gm.get_trainer(GENV, num_policies)
-print(trainer.get_policy("policy_0").model.base_model.summary())
-qmodel=trainer.get_policy("policy_0").model.q_value_head
-
-plot_model(qmodel, show_shapes=True, show_layer_names=True)
-
 trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 start = time.time()
