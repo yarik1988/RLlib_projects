@@ -9,7 +9,7 @@ import model_a3c as gm
 
 
 PC_agents=['agent_0','agent_1']
-PC_agents=['agent_1']
+PC_agents=['agent_0']
 #PC_agents=[]
 GENV=GomokuEnv.GomokuEnv(gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
 pp = pprint.PrettyPrinter(indent=4)
@@ -18,7 +18,7 @@ if len(PC_agents)>0:
     ray.init()
     ModelCatalog.register_custom_model("GomokuModel", gm.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
-    trainer = gm.get_trainer(GENV,1, ['policy_0'])
+    trainer = gm.get_trainer(GENV, 1)
     trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 obs = GENV.reset()
