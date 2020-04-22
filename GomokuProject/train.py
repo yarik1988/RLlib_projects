@@ -6,14 +6,14 @@ import time
 import pprint
 import psutil
 import aux_fn
-import model_a3c as gm
-num_policies = 1
+import model_dqn as gm
+num_policies = 2
 
 ray.init()
 GENV = GomokuEnv.GomokuEnv(gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 register_env("GomokuEnv", lambda _: GENV)
 trainer = gm.get_trainer(GENV, num_policies)
-trainer = aux_fn.load_weights(trainer,gm.BOARD_SIZE,gm.NUM_IN_A_ROW)
+trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 start = time.time()
 pp = pprint.PrettyPrinter(indent=4)
@@ -40,7 +40,7 @@ while True:
         print("Restarting trainer")
         state = trainer.save(".")
         trainer.stop()
-        trainer = gm.get_trainer(GENV, num_policies, ["policy_{}".format(int(cur_switch))])
+        trainer = gm.get_trainer(GENV, num_policies)
         trainer.restore(state)
 
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:

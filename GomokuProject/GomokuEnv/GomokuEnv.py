@@ -1,3 +1,4 @@
+import random
 from gym import spaces
 import numpy as np
 import sys
@@ -28,7 +29,7 @@ class GomokuEnv(MultiAgentEnv):
 
     def reset(self):
         self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
-        self.parity = False
+        self.parity = random.choice([False, True])
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
         obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ones(self.board_size**2)}
@@ -46,7 +47,7 @@ class GomokuEnv(MultiAgentEnv):
         self.nsteps = self.infos[cur_agent]['nsteps']+self.infos[other_agent]['nsteps']
         action = action_dict[cur_agent]
         self.new_move = (action//self.board_size, action % self.board_size)
-        rewards = {cur_agent: 0.01, other_agent: 0}
+        rewards = {cur_agent: 0, other_agent: 0}
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
