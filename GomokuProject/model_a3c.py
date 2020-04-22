@@ -30,19 +30,16 @@ class GomokuModel(TFModelV2):
             self.outputs = int(np.sqrt(num_outputs))
             can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
             cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
-            kz = [4, 4, 4]
-            filt = [8, 8, 8]
+            kz = [4, 4, 4, 4]
+            filt = [8, 8, 8, 1]
             regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
             for i in range(len(kz)):
                 cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                                    kernel_regularizer=regul, activation='elu', name="Conv_" + str(i))(cur_layer)
-                cur_layer = tf.keras.layers.Activation(tf.nn.sigmoid, name="Act_" + str(i))(cur_layer)
 
-            layer_out = tf.keras.layers.Conv2D(kernel_size=3, filters=1, padding='same',
-                                               kernel_regularizer=regul, name='Out')(cur_layer)
             layer_flat = tf.keras.layers.Flatten(name='FlatFin')(cur_layer)
             value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, name='OutV')(layer_flat)
-            self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
+            self.base_model = tf.keras.Model(self.inputs, [cur_layer, value_out])
             self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
@@ -93,7 +90,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
-            "custom_options": {"use_symmetry": False, "reg_loss": 0},
+            "custom_options": {"use_symmetry": True, "reg_loss": 0},
         },
     }
     return (None, GENV.observation_space, GENV.action_space, config)

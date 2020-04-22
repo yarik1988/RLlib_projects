@@ -96,13 +96,13 @@ def map_fn(np):
 
 
 def get_trainer(GENV, np):
-    trainer = ray.rllib.agents.dqn.DQNTrainer(env="GomokuEnv", config={
+    trainer = ray.rllib.agents.dqn.ApexTrainer(env="GomokuEnv", config={
         "multiagent": {
             "policies": {"policy_{}".format(i): gen_policy(GENV, i) for i in range(np)},
             "policy_mapping_fn": map_fn(np),
             },
         "num_workers": 2,
-        "hiddens": [64],
+        "hiddens": [36],
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},
     })
