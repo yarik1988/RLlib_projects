@@ -113,6 +113,7 @@ def get_trainer(GENV, np):
             "policies": {"policy_{}".format(i): gen_policy(GENV,i) for i in range(np)},
             "policy_mapping_fn": map_fn(np),
             },
+        "lr":0.001,
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},
     })

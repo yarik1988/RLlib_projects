@@ -1,4 +1,3 @@
-import random
 from gym import spaces
 import numpy as np
 import sys
@@ -29,7 +28,7 @@ class GomokuEnv(MultiAgentEnv):
 
     def reset(self):
         self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
-        self.parity = random.choice([True, False])
+        self.parity = False
         self.nsteps = 0
         self.board = np.zeros((self.board_size, self.board_size), dtype=np.int)
         obs_agent_0 = {"real_obs": self.cook_obs(self.board), "action_mask":  np.ones(self.board_size**2)}
@@ -40,6 +39,7 @@ class GomokuEnv(MultiAgentEnv):
 
     def step(self, action_dict):
         done = False
+
         cur_agent = "agent_{}".format(int(self.parity))
         other_agent = "agent_{}".format(int(not self.parity))
         self.infos[cur_agent]['nsteps'] += 1
@@ -50,13 +50,13 @@ class GomokuEnv(MultiAgentEnv):
         if self.board[self.new_move] == 0:
             self.board[self.new_move] = 1-2*self.parity
             if self.check_five(self.new_move):
-                rewards[cur_agent] = 1
+                rewards[cur_agent] = 1-self.nsteps/self.board_size**2
                 rewards[other_agent] = -1+self.nsteps/self.board_size**2
-                self.infos[cur_agent]["result"] = 1-self.nsteps/self.board_size**2
+                self.infos[cur_agent]["result"] = 1
                 done = True
             elif not np.any(self.board == 0):  # Draw. No reward to anyone
-                rewards[cur_agent] = 0
-                rewards[other_agent] = 0
+                rewards[cur_agent] = 0.5
+                rewards[other_agent] = 0.5
                 done = True
         else:
             rewards[cur_agent] = -1  # Incorrect move. Penalty
