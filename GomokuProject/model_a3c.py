@@ -35,12 +35,11 @@ class GomokuModel(TFModelV2):
             regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
             for i in range(len(kz)):
                 cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
-                                                   kernel_regularizer=regul, name="Conv_" + str(i))(cur_layer)
-                #cur_layer = tf.keras.layers.BatchNormalization(name="Batch_" + str(i))(cur_layer)
+                                                   kernel_regularizer=regul, activation='elu', name="Conv_" + str(i))(cur_layer)
                 cur_layer = tf.keras.layers.Activation(tf.nn.sigmoid, name="Act_" + str(i))(cur_layer)
 
             layer_out = tf.keras.layers.Conv2D(kernel_size=3, filters=1, padding='same',
-                                               kernel_regularizer=regul, name='Out', activation=tf.nn.sigmoid)(cur_layer)
+                                               kernel_regularizer=regul, name='Out', activation=None)(cur_layer)
             layer_flat = tf.keras.layers.Flatten(name='FlatFin')(cur_layer)
             value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, name='OutV')(layer_flat)
             self.base_model = tf.keras.Model(self.inputs, [layer_out, value_out])
