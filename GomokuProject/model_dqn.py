@@ -37,11 +37,7 @@ class GomokuModel(DistributionalQTFModel):
             for i in range(len(kz)):
                 cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
                                                    kernel_regularizer=regul, activation='elu', name="Conv_" + str(i))(cur_layer)
-
-            layer_flat = tf.keras.layers.Flatten(name='FlatFin')(cur_layer)
-            value_out = tf.keras.layers.Dense(20, activation='sigmoid', kernel_regularizer=regul, name='OutV1')(layer_flat)
-            value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, name='OutV2')(value_out)
-            self.base_model = tf.keras.Model(self.inputs, [layer_flat, value_out])
+            self.base_model = tf.keras.Model(self.inputs, cur_layer, name='DQN_model')
             self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
@@ -49,37 +45,36 @@ class GomokuModel(DistributionalQTFModel):
         board_tmp = tf.image.rot90(board_tmp, k=rotc % 4)
         if is_flip:
             board_tmp = tf.image.flip_up_down(board_tmp)
-        model_out, val_out = self.base_model(board_tmp)
+        model_out = self.base_model(board_tmp)
 
         if is_flip:
             model_out = tf.image.flip_up_down(model_out)
 
         model_out = tf.image.rot90(model_out, k=(4-rotc) % 4)
         model_out_fin = tf.reshape(model_out, [-1, self.outputs**2])
-        value_out_fin = tf.reshape(val_out, [-1])
-        return model_out_fin, value_out_fin
+        return model_out_fin
 
     def forward(self, input_dict, state, seq_lens):
+        self.action_mask = input_dict["obs"]["action_mask"]
         board = input_dict["obs"]["real_obs"]
         if self.use_symmetry:
             model_rot_out = [None]*8
-            value_out = [None]*8
             for j in range(2):
                 for i in range(4):
-                    model_rot_out[j*4+i], value_out[j*4+i] = self.get_sym_output(board, i, j)
+                    model_rot_out[j*4+i] = self.get_sym_output(board, i, j)
             model_out = tf.math.add_n(model_rot_out)
-            self.value_out = tf.math.add_n(value_out)
         else:
-            model_out, self.value_out = self.base_model(board)
+            model_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
-            self.value_out = tf.reshape(self.value_out, [-1])
-        inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        model_out = model_out+inf_mask
         return model_out, state
 
     def value_function(self):
         return self.value_out
 
+    def get_q_value_distributions(self, model_out):
+        model_out, logits, dist = self.q_value_head(model_out)
+        inf_mask = tf.maximum(tf.log(self.action_mask), tf.float32.min)
+        return model_out+inf_mask, logits, dist
 
 def gen_policy(GENV, i):
     ModelCatalog.register_custom_model("GomokuModel_{}".format(i), GomokuModel)
@@ -87,6 +82,7 @@ def gen_policy(GENV, i):
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
             "custom_options": {"use_symmetry": True, "reg_loss": 0},
+            "fcnet_hiddens": [36],
         },
     }
     return (None, GENV.observation_space, GENV.action_space, config)
@@ -105,8 +101,8 @@ def get_trainer(GENV, np):
             "policies": {"policy_{}".format(i): gen_policy(GENV, i) for i in range(np)},
             "policy_mapping_fn": map_fn(np),
             },
-        "dueling": False,
-        "hiddens": None,
+        "num_workers": 2,
+        "hiddens": [64],
         "callbacks":
             {"on_episode_end": aux_fn.clb_episode_end},
     })
