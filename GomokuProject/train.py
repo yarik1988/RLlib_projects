@@ -5,7 +5,6 @@ from GomokuEnv import GomokuEnv
 import time
 import pprint
 import psutil
-
 import aux_fn
 import model_dqn as gm
 num_policies = 2
@@ -28,12 +27,18 @@ while True:
             print("First policy learning rate={}".format(rest['info']['learner']['policy_0']['cur_lr']))
         if 'policy_1' in rest['info']['learner']:
             print("Second policy learning rate={}".format(rest['info']['learner']['policy_1']['cur_lr']))
-    print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
-    print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
-    print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
-    print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
-    print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
-    print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
+    if 'agent_0_win_rate_mean' in rest['custom_metrics']:
+        print("First player win rate = {}%".format(100*rest['custom_metrics']['agent_0_win_rate_mean']))
+    if 'agent_1_win_rate_mean' in rest['custom_metrics']:
+        print("Second player win rate = {}%".format(100*rest['custom_metrics']['agent_1_win_rate_mean']))
+    if 'game_duration_min' in rest['custom_metrics']:
+        print("Minimum game duration = {}".format(rest['custom_metrics']['game_duration_min']))
+    if 'game_duration_mean' in rest['custom_metrics']:
+        print("Average game duration = {}".format(rest['custom_metrics']['game_duration_mean']))
+    if 'game_duration_max' in rest['custom_metrics']:
+        print("Maximum game duration = {}".format(rest['custom_metrics']['game_duration_max']))
+    if 'wrong_moves_mean' in rest['custom_metrics']:
+        print("Wrong moves count = {}".format(rest['custom_metrics']['wrong_moves_mean']))
     if time.time()-start > 300:
         print('Weights saving')
         aux_fn.save_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)

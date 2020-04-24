@@ -1,18 +1,14 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 import ray
-import sys
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.tf_action_dist import *
-from ray.rllib.utils import try_import_tf
-tf=try_import_tf()
-import numpy as np
 import aux_fn
+from ray.rllib.utils import try_import_tf
+tf = try_import_tf()
 
 BOARD_SIZE = 6
 NUM_IN_A_ROW = 4
 
-dns=tf.keras.layers.Dense(1, activation=None, name='OutV')
 
 class GomokuModel(TFModelV2):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
@@ -68,8 +64,8 @@ class GomokuModel(TFModelV2):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs])
             self.value_out = tf.reshape(self.value_out, [-1])
-        inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        model_out = model_out+inf_mask
+        #inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
+        #model_out = model_out+inf_mask
         return model_out, state
 
     def value_function(self):
@@ -84,7 +80,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
-            "custom_options": {"use_symmetry": True},
+            "custom_options": {"use_symmetry": False},
         },
     }
     return (None, GENV.observation_space, GENV.action_space, config)
@@ -104,8 +100,7 @@ def get_trainer(GENV, np):
             "policies": {"policy_{}".format(i): gen_policy(GENV, i) for i in range(np)},
             "policy_mapping_fn": map_fn(np),
             },
-        "callbacks":
-            {"on_episode_end": aux_fn.clb_episode_end},
+        "callbacks": aux_fn.MyCallback
     })
     return trainer
 

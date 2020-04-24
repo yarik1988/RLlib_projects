@@ -70,7 +70,8 @@ class GomokuModel(DistributionalQTFModel):
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
         inf_mask = tf.maximum(tf.log(self.action_mask), tf.float32.min)
-        return model_out+inf_mask, logits, dist
+        model_out=model_out+inf_mask
+        return model_out, logits, dist
 
 def gen_policy(GENV, i):
     ModelCatalog.register_custom_model("GomokuModel_{}".format(i), GomokuModel)
@@ -101,8 +102,7 @@ def get_trainer(GENV, np, is_training=True):
         "num_gpus": 1,
         "num_workers": 2,
         "hiddens": [36],
-        "callbacks":
-            {"on_episode_end": aux_fn.clb_episode_end},
+        "callbacks": aux_fn.MyCallback
     })
     all_model=trainer.get_policy("policy_0").model
     print(all_model.base_model.summary())
