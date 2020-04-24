@@ -12,10 +12,10 @@ class GomokuEnv(MultiAgentEnv):
     def __init__(self, board_size,num_in_a_row):
         self.board_size = board_size
         self.num_in_a_row=num_in_a_row
-        self.obs_shape = (self.board_size, self.board_size, 1)  # board_size * board_size
+        self.obs_shape = (self.board_size, self.board_size, 3)  # board_size * board_size
         self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
         self.observation_space = spaces.Dict({
-            "real_obs": spaces.Box(-np.ones(self.obs_shape), np.ones(self.obs_shape)),
+            "real_obs": spaces.Box(np.zeros(self.obs_shape), np.ones(self.obs_shape)),
             "action_mask": spaces.Box(np.zeros(self.board_size**2), np.ones(self.board_size**2), dtype=bool)})
         self.action_space = spaces.Discrete(board_size**2)
         self.viewer = None
@@ -24,8 +24,12 @@ class GomokuEnv(MultiAgentEnv):
         self.winning_stride = None
         self.parity = None
 
-    def cook_obs(self,board):
-        return np.expand_dims(board, axis=2)
+    def cook_obs(self, board):
+        res = np.zeros((self.board_size, self.board_size, 3))
+        res[:, :, 0] = (board == 1)
+        res[:, :, 1] = (board == 0)
+        res[:, :, 2] = (board == -1)
+        return res
 
     def reset(self):
         self.infos = {i: {"result": 0, "nsteps": 0, "wrong_moves": 0} for i in ['agent_0', 'agent_1']}
@@ -41,7 +45,6 @@ class GomokuEnv(MultiAgentEnv):
 
     def step(self, action_dict):
         done = False
-
         cur_agent = "agent_{}".format(int(self.parity))
         other_agent = "agent_{}".format(int(not self.parity))
         self.infos[cur_agent]['nsteps'] += 1

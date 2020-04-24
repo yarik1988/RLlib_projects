@@ -5,7 +5,7 @@ from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import time
 import aux_fn
-import model_a3c as gm
+import model_dqn as gm
 
 
 PC_agents=['agent_0','agent_1']
@@ -18,7 +18,7 @@ if len(PC_agents)>0:
     ray.init()
     ModelCatalog.register_custom_model("GomokuModel", gm.GomokuModel)
     register_env("GomokuEnv", lambda _:GENV)
-    trainer = gm.get_trainer(GENV, 2)
+    trainer = gm.get_trainer(GENV, 2, is_training=False)
     trainer = aux_fn.load_weights(trainer, gm.BOARD_SIZE, gm.NUM_IN_A_ROW)
 
 obs = GENV.reset()

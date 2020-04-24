@@ -21,26 +21,23 @@ class GomokuModel(TFModelV2):
             self.use_symmetry = model_config['custom_options']['use_symmetry']
         else:
             self.use_symmetry = False
-        with tf.variable_scope(
-                tf.VariableScope(tf.AUTO_REUSE, "shared"),
-                reuse=tf.AUTO_REUSE,
-                auxiliary_name_scope=False):
-            input_shp = obs_space.original_space.spaces['real_obs']
-            self.inputs = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
-            self.outputs = int(np.sqrt(num_outputs))
-            can_move = tf.math.equal(self.inputs, tf.fill(tf.shape(self.inputs), 0.0))
-            cur_layer = tf.concat([self.inputs, tf.dtypes.cast(can_move, tf.float32)], axis=3)
-            kz = [4, 4, 4, 4]
-            filt = [8, 8, 8, 1]
-            regul = tf.keras.regularizers.l2(self.model_config['custom_options']['reg_loss'])
-            for i in range(len(kz)):
-                cur_layer = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
-                                                   kernel_regularizer=regul, activation='elu', name="Conv_" + str(i))(cur_layer)
+        self.outputs = num_outputs
+        input_shp = obs_space.original_space.spaces['real_obs']
+        kz = [4, 4, 4, 4]
+        filt = [8, 8, 8, 1]
+        n = len(kz)
+        self.layers = [0]*(n+1)
+        self.layers[0] = tf.keras.layers.Input(shape=input_shp.shape, name="observations")
 
-            layer_flat = tf.keras.layers.Flatten(name='FlatFin')(cur_layer)
-            value_out = tf.keras.layers.Dense(1, activation=None, kernel_regularizer=regul, name='OutV')(layer_flat)
-            self.base_model = tf.keras.Model(self.inputs, [cur_layer, value_out])
-            self.register_variables(self.base_model.variables)
+        for i in range(len(kz)):
+            self.layers[i+1] = tf.keras.layers.Conv2D(kernel_size=kz[i], filters=filt[i], padding='same',
+                                                      activation='elu')(self.layers[i])
+
+        layer_flat = tf.keras.layers.Flatten(name='FlatFin')(self.layers[n])
+        value_out = tf.keras.layers.Dense(10, activation='tanh')(layer_flat)
+        value_out = tf.keras.layers.Dense(1, activation=None)(value_out)
+        self.base_model = tf.keras.Model(self.layers[0], [self.layers[n], value_out])
+        self.register_variables(self.base_model.variables)
 
     def get_sym_output(self, board, rotc=0, is_flip=False):
         board_tmp = tf.identity(board)
@@ -53,7 +50,7 @@ class GomokuModel(TFModelV2):
             model_out = tf.image.flip_up_down(model_out)
 
         model_out = tf.image.rot90(model_out, k=(4-rotc) % 4)
-        model_out_fin = tf.reshape(model_out, [-1, self.outputs**2])
+        model_out_fin = tf.reshape(model_out, [-1, self.outputs])
         value_out_fin = tf.reshape(val_out, [-1])
         return model_out_fin, value_out_fin
 
@@ -69,7 +66,7 @@ class GomokuModel(TFModelV2):
             self.value_out = tf.math.add_n(value_out)
         else:
             model_out, self.value_out = self.base_model(board)
-            model_out = tf.reshape(model_out, [-1, self.outputs ** 2])
+            model_out = tf.reshape(model_out, [-1, self.outputs])
             self.value_out = tf.reshape(self.value_out, [-1])
         inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
         model_out = model_out+inf_mask
@@ -87,7 +84,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
-            "custom_options": {"use_symmetry": True, "reg_loss": 0},
+            "custom_options": {"use_symmetry": True},
         },
     }
     return (None, GENV.observation_space, GENV.action_space, config)
