@@ -1,5 +1,5 @@
 import ray
-import sys,select
+import sys, select
 from ray.tune.registry import register_env
 from GomokuEnv import GomokuEnv
 import time

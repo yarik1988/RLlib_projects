@@ -1,12 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-import tensorflow as tf
-from tensorflow.keras.utils import plot_model
 import ray
-from ray import tune
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_action_dist import *
 from ray.rllib.agents.dqn.distributional_q_tf_model import DistributionalQTFModel
-import numpy as np
 import aux_fn
 
 BOARD_SIZE = 6
@@ -69,8 +64,8 @@ class GomokuModel(DistributionalQTFModel):
 
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
-        inf_mask = tf.maximum(tf.log(self.action_mask), tf.float32.min)
-        model_out=model_out+inf_mask
+        #inf_mask = tf.maximum(tf.log(self.action_mask), -1000)
+        #model_out=model_out+inf_mask
         return model_out, logits, dist
 
 def gen_policy(GENV, i):
@@ -78,7 +73,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
-            "custom_options": {"use_symmetry": True, "reg_loss": 0},
+            "custom_options": {"use_symmetry": False},
             "fcnet_hiddens": [36],
         },
     }
