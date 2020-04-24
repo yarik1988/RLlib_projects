@@ -64,8 +64,8 @@ class GomokuModel(TFModelV2):
             model_out, self.value_out = self.base_model(board)
             model_out = tf.reshape(model_out, [-1, self.outputs])
             self.value_out = tf.reshape(self.value_out, [-1])
-        #inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
-        #model_out = model_out+inf_mask
+        inf_mask = tf.maximum(tf.math.log(input_dict["obs"]["action_mask"]), tf.float32.min)
+        model_out = model_out+inf_mask
         return model_out, state
 
     def value_function(self):

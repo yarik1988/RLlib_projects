@@ -64,8 +64,8 @@ class GomokuModel(DistributionalQTFModel):
 
     def get_q_value_distributions(self, model_out):
         model_out, logits, dist = self.q_value_head(model_out)
-        #inf_mask = tf.maximum(tf.log(self.action_mask), -1000)
-        #model_out=model_out+inf_mask
+        inf_mask = tf.maximum(tf.log(self.action_mask), tf.float32.min)
+        model_out=model_out+inf_mask
         return model_out, logits, dist
 
 def gen_policy(GENV, i):
@@ -73,7 +73,7 @@ def gen_policy(GENV, i):
     config = {
         "model": {
             "custom_model": "GomokuModel_{}".format(i),
-            "custom_options": {"use_symmetry": False},
+            "custom_options": {"use_symmetry": True},
             "fcnet_hiddens": [36],
         },
     }

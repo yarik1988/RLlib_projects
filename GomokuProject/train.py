@@ -6,7 +6,7 @@ import time
 import pprint
 import psutil
 import aux_fn
-import model_dqn as gm
+import model_a3c as gm
 num_policies = 2
 
 ray.init()

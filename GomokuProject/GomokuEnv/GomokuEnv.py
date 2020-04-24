@@ -59,14 +59,17 @@ class GomokuEnv(MultiAgentEnv):
                 rewards[other_agent] = -1+self.nsteps/(2*self.board_size**2)
                 self.infos[cur_agent]["result"] = 1
                 done = True
-            elif not np.any(self.board == 0) or self.nsteps>=2*self.board_size**2:  # Draw. No reward to anyone
+            elif not np.any(self.board == 0):  # Draw. No reward to anyone
                 rewards[cur_agent] = 0
                 rewards[other_agent] = 0
                 done = True
         else:
-            rewards[cur_agent] = -1  # Incorrect move. Penalty
+            rewards[cur_agent] = -0.1  # Incorrect move. Penalty
             self.infos[cur_agent]["wrong_moves"] += 1
             self.new_move = None
+
+        if self.nsteps >= 2*self.board_size**2:
+            done = True
 
         if np.any(self.board == 0):
            act_mask=np.ndarray.flatten(self.board == 0)
