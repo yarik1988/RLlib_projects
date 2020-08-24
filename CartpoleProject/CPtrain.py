@@ -1,19 +1,21 @@
-import ray
+import os
+import keyboard
 import time
-import tensorflow as tf
+import ray
 import ray.rllib.agents.a3c as a3c
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.tune.registry import register_env
+import tensorflow as tf
 import gym
 from gym import RewardWrapper
 import pickle
-import os
-import _thread
 
-def input_thread(a_list):
-    input()
-    a_list.append(True)
+
+ready_to_exit = False
+def press_key_exit(_q):
+    global ready_to_exit
+    ready_to_exit=True
 
 
 class ScaleReward(RewardWrapper):
@@ -41,33 +43,31 @@ class CartpoleModel(TFModelV2):
         return tf.reshape(self._value_out, [-1])
 
 
-ray.init()
+ray.init(include_dashboard=False)
 ModelCatalog.register_custom_model("CartpoleModel", CartpoleModel)
 CartpoleEnv = gym.make('CartPole-v0')
 CartpoleEnv = ScaleReward(CartpoleEnv)
 register_env("CP", lambda _:CartpoleEnv)
 
-
-
 trainer = a3c.A3CTrainer(env="CP", config={"model": {"custom_model": "CartpoleModel"}})
-
 if os.path.isfile('weights.pickle'):
-   weights = pickle.load(open("weights.pickle", "rb"))
-   trainer.restore_from_object(weights)
+    weights = pickle.load(open("weights.pickle", "rb"))
+    trainer.restore_from_object(weights)
 
 
-a_list = []
-_thread.start_new_thread(input_thread, (a_list,))
-while not a_list:
-      rest=trainer.train()
-      print(rest["episode_reward_mean"])
+keyboard.on_press_key("q", press_key_exit)
+while True:
+    if ready_to_exit:
+        break
+    rest = trainer.train()
+    print(rest["episode_reward_mean"])
 
-weights=trainer.save_to_object()
+weights = trainer.save_to_object()
 pickle.dump(weights, open('weights.pickle', 'wb'))
 print('Model saved')
 
 
-obs=CartpoleEnv.reset()
+obs = CartpoleEnv.reset()
 cur_action = None
 total_rev = 0
 rew = None
