@@ -8,4 +8,5 @@ while not done:
     obs, rewards, dones, info = PVEnv.step({"predator": (np.random.rand(2)*2-1)*0.001, "victim": (np.random.rand(2)*2-1)*0.001})
     done = dones['__all__']
     PVEnv.render()
+    print(PVEnv.n_steps)
 

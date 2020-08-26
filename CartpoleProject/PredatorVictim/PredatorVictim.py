@@ -45,9 +45,10 @@ class PredatorVictim(MultiAgentEnv):
                 self.entities[key]["vel"] /= vel_abs
                 self.entities[key]["vel"] *= self.entities[key]["max_vel"]
             self.entities[key]["pos"] += self.entities[key]["vel"]
-            if np.max(self.entities[key]["pos"]) > 1 or np.min(self.entities[key]["pos"]) < -1:
-                done = True
-                rewards[key] = -10
+            for i in range(2):
+                if self.entities[key]["pos"][i] > 1 or self.entities[key]["pos"][i] < -1:
+                    self.entities[key]["pos"][i] = np.sign(self.entities[key]["pos"][i])
+                    self.entities[key]["vel"][i] *= -1
 
         dist_between = np.linalg.norm(self.entities["predator"]["pos"]-self.entities["victim"]["pos"])
         rewards["predator"] -= dist_between
