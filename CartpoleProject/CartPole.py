@@ -50,8 +50,8 @@ CartpoleEnv = ScaleReward(CartpoleEnv)
 register_env("CP", lambda _:CartpoleEnv)
 
 trainer = a3c.A3CTrainer(env="CP", config={"model": {"custom_model": "CartpoleModel"}})
-if os.path.isfile('weights.pickle'):
-    weights = pickle.load(open("weights.pickle", "rb"))
+if os.path.isfile('CartPole.pickle'):
+    weights = pickle.load(open("CartPole.pickle", "rb"))
     trainer.restore_from_object(weights)
 
 
@@ -63,7 +63,7 @@ while True:
     print(rest["episode_reward_mean"])
 
 weights = trainer.save_to_object()
-pickle.dump(weights, open('weights.pickle', 'wb'))
+pickle.dump(weights, open('CartPole.pickle', 'wb'))
 print('Model saved')
 
 
