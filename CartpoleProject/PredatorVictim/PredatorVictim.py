@@ -1,5 +1,6 @@
 from gym import spaces
 import numpy as np
+import time
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
@@ -24,6 +25,8 @@ class PredatorVictim(MultiAgentEnv):
         return res
 
     def reset(self):
+        seeder = np.modf(time.time())[0]
+        np.random.seed(int(seeder*2**32))
         self.n_steps = 0
         self.entities["predator"] = self.create_entity(self.params['max_predator_vel'], (1, 0, 0))
         self.entities["victim"] = self.create_entity(self.params['max_victim_vel'], (0, 1, 0))
@@ -34,11 +37,12 @@ class PredatorVictim(MultiAgentEnv):
         return obs
 
     def step(self, action_dict):
+        action_dict['predator'] *= self.params['max_predator_acceleration']
+        action_dict['victim'] *= self.params['max_victim_acceleration']
         done = False
         self.n_steps += 1
-        rewards = dict()
+        rewards = {"predator": 0, "victim": 0}
         for key in self.entities:
-            rewards[key] = 0
             self.entities[key]["vel"] += action_dict[key]
             vel_abs = np.linalg.norm(self.entities[key]["vel"])
             if vel_abs > self.entities[key]["max_vel"]:
@@ -51,10 +55,16 @@ class PredatorVictim(MultiAgentEnv):
                     self.entities[key]["vel"][i] *= -1
 
         dist_between = np.linalg.norm(self.entities["predator"]["pos"]-self.entities["victim"]["pos"])
-        rewards["predator"] -= dist_between
-        rewards["victim"] += dist_between
-        if self.n_steps > self.params["max_steps"] or dist_between < self.params["catch_distance"]:
+        #rewards["predator"] = (1/dist_between+self.params["catch_distance"])*0.01
+        #rewards["victim"] = dist_between*0.01
+        if dist_between < self.params["catch_distance"]:
+            rewards["predator"] = 1/self.n_steps
+            rewards["victim"] = -0.1
             done = True
+        elif self.n_steps > self.params["max_steps"]:
+            done = True
+            rewards["predator"] = -0.1
+            rewards["victim"] = 0.1
         observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
                                       self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
 
