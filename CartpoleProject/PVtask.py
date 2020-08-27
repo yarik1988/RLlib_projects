@@ -1,6 +1,9 @@
 import numpy as np
 from PredatorVictim import PredatorVictim
-params={'max_predator_vel': 0.01, 'max_victim_vel': 0.01, 'max_steps': 2000000}
+params={'max_predator_vel': 0.01,
+        'max_victim_vel': 0.01,
+        'max_steps': 2000000,
+        'catch_distance': 0.1}
 PVEnv = PredatorVictim.PredatorVictim(params)
 PVEnv.reset()
 done = False

@@ -53,7 +53,7 @@ class PredatorVictim(MultiAgentEnv):
         dist_between = np.linalg.norm(self.entities["predator"]["pos"]-self.entities["victim"]["pos"])
         rewards["predator"] -= dist_between
         rewards["victim"] += dist_between
-        if self.n_steps > self.params["max_steps"] or dist_between < 0.01:
+        if self.n_steps > self.params["max_steps"] or dist_between < self.params["catch_distance"]:
             done = True
         observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
                                       self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
@@ -65,12 +65,13 @@ class PredatorVictim(MultiAgentEnv):
 
     def render(self, mode='human'):
         screen_wh = 600
+        radius=self.params["catch_distance"]*screen_wh/4
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(screen_wh, screen_wh)
             for key in self.entities:
                 self.entities[key]['trans'] = rendering.Transform()
-                self.entities[key]['geom'] = rendering.make_circle()
+                self.entities[key]['geom'] = rendering.make_circle(radius=radius)
                 self.entities[key]['geom'].add_attr(self.entities[key]['trans'])
                 self.entities[key]['geom'].set_color(*self.entities[key]['color'])
                 self.viewer.add_geom(self.entities[key]['geom'])
