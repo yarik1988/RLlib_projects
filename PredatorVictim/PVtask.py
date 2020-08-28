@@ -36,10 +36,6 @@ class PredatorVictimModel(TFModelV2):
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
 
-    def policy_variables(self):
-        """Return the list of variables for the policy net."""
-        return list(self.action_net.variables)
-
 
 def gen_policy(PVEnv, i):
     ModelCatalog.register_custom_model("PredatorVictimModel_{}".format(i), PredatorVictimModel)
@@ -48,31 +44,36 @@ def gen_policy(PVEnv, i):
     }
     return None, PVEnv.observation_space, PVEnv.action_space, config
 
+def policy_mapping_fn(agent_id):
+    if agent_id == 'predator':
+        return "policy_predator"
+    elif agent_id == 'victim':
+        return "policy_victim"
 
-params = {'max_predator_vel': 0.01,
-          'max_victim_vel': 0.002,
-          'max_predator_acceleration': 0.001,
-          'max_victim_acceleration': 0.0001,
+
+params = {'predator': {'max_vel': 0.01, 'max_acceleration':0.001},
+          'victim': {'max_vel': 0.002, 'max_acceleration': 0.0001},
           'max_steps': 1000,
           'catch_distance': 0.1}
 
+
 ray.init(include_dashboard=False)
 ModelCatalog.register_custom_model("CartpoleModel", PredatorVictimModel)
-PVEnv = gym.make("PredatorVictim-v0",params=params)
+PVEnv = gym.make("PredatorVictim-v0", params=params)
 register_env("PredatorVictimEnv", lambda _: PVEnv)
 
-trainer = ray.rllib.agents.a3c.A3CTrainer(env="PredatorVictimEnv", config={
+trainer = a3c.A3CTrainer(env="PredatorVictimEnv", config={
         "multiagent": {
             "policies": {"policy_predator": gen_policy(PVEnv, 0),
                          "policy_victim": gen_policy(PVEnv, 1)},
-            "policy_mapping_fn": lambda agent_id: "policy_predator" if agent_id == 'predator' else "policy_victim",
+            "policy_mapping_fn": policy_mapping_fn,
             },
     })
 
 if os.path.isfile('PredatorVictim.pickle'):
     weights = pickle.load(open("PredatorVictim.pickle", "rb"))
     trainer.restore_from_object(weights)
-'''
+
 keyboard.on_press_key("q", press_key_exit)
 while True:
     if ready_to_exit:
@@ -83,7 +84,7 @@ while True:
 weights = trainer.save_to_object()
 pickle.dump(weights, open('PredatorVictim.pickle', 'wb'))
 print('Model saved')
-'''
+
 video = cv2.VideoWriter("../videos/Predator_Victim.avi", 0, 60, (PVEnv.screen_wh,PVEnv.screen_wh))
 
 for i in range(5):

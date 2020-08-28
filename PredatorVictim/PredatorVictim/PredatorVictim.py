@@ -11,11 +11,9 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, **kwargs):
-
         self.params = kwargs.get("params")
-        self.reward_range = (-0.02*np.sqrt(2), 0.02*np.sqrt(2))
-        self.observation_space = spaces.Box(-np.ones(8), np.ones(8), dtype=np.float64)
-        self.action_space = spaces.Box(-np.ones(2), np.ones(2), dtype=np.float64)
+        self.observation_space = spaces.Box(-np.ones(8), np.ones(8))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(2,))
         self.entities = dict()
         self.n_steps = 0
         self.seed()
@@ -26,20 +24,19 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def create_entity(self, max_vel, color):
+    def create_entity(self, name, color):
         res = dict()
         res['pos'] = 2*self.np_random.rand(2)-1
         res['vel'] = 2 * self.np_random.rand(2) - 1
         res['vel'] /= np.linalg.norm(res['vel'])
-        res['vel'] *= self.np_random.rand() * max_vel
-        res['max_vel'] = max_vel
+        res['vel'] *= self.np_random.rand() * self.params[name]['max_vel']
         res['color'] = color
         return res
 
     def reset(self):
         self.n_steps = 0
-        self.entities["predator"] = self.create_entity(self.params['max_predator_vel'], (1, 0, 0))
-        self.entities["victim"] = self.create_entity(self.params['max_victim_vel'], (0, 1, 0))
+        self.entities["predator"] = self.create_entity("predator", (1, 0, 0))
+        self.entities["victim"] = self.create_entity("victim", (0, 1, 0))
 
         observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
                                       self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
@@ -47,17 +44,19 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
         return obs
 
     def step(self, action_dict):
-        action_dict['predator'] *= self.params['max_predator_acceleration']
-        action_dict['victim'] *= self.params['max_victim_acceleration']
         done = False
         self.n_steps += 1
         rewards = {"predator": 0, "victim": 0}
         for key in self.entities:
-            self.entities[key]["vel"] += action_dict[key]
+            if np.linalg.norm(action_dict[key]) > 1:
+                act = action_dict[key]/np.linalg.norm(action_dict[key])
+            else:
+                act = action_dict[key]
+            self.entities[key]["vel"] += self.params[key]['max_acceleration'] * act
             vel_abs = np.linalg.norm(self.entities[key]["vel"])
-            if vel_abs > self.entities[key]["max_vel"]:
+            if vel_abs > self.params[key]["max_vel"]:
                 self.entities[key]["vel"] /= vel_abs
-                self.entities[key]["vel"] *= self.entities[key]["max_vel"]
+                self.entities[key]["vel"] *= self.params[key]["max_vel"]
             self.entities[key]["pos"] += self.entities[key]["vel"]
             for i in range(2):
                 if self.entities[key]["pos"][i] > 1 or self.entities[key]["pos"][i] < -1:
@@ -68,9 +67,11 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
 
         rewards["victim"] = dist_between*0.01
         rewards["predator"] = - dist_between * 0.01
-        if dist_between < self.params["catch_distance"] or self.n_steps > self.params["max_steps"]:
+        if dist_between < self.params["catch_distance"]:
+            rewards["predator"] += 5/self.n_steps
             done = True
-
+        if self.n_steps > self.params["max_steps"]:
+            done = True
         observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
                                       self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
 
