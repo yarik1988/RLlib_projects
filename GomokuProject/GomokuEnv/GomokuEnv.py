@@ -1,4 +1,5 @@
 import random
+import gym
 from gym import spaces
 import numpy as np
 import sys
@@ -7,7 +8,7 @@ from itertools import groupby
 import pyglet
 
 
-class GomokuEnv(MultiAgentEnv):
+class GomokuEnv(gym.Env):
     win_dim_px=500
     def __init__(self, board_size,num_in_a_row):
         self.board_size = board_size
