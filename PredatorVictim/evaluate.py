@@ -1,10 +1,10 @@
 import cv2
 
 
-def evaluate(trainer, PVEnv, video_file=None):
+def evaluate(trainer, PVEnv, n_iter=5, video_file=None):
     if video_file is not None:
         video = cv2.VideoWriter("../videos/Predator_Victim.avi", 0, 60, (PVEnv.screen_wh, PVEnv.screen_wh))
-    for i in range(5):
+    for i in range(n_iter):
         obs = PVEnv.reset()
         done = False
         while not done:
