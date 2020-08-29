@@ -13,7 +13,10 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
     def __init__(self, **kwargs):
         self.params = kwargs.get("params")
         self.observation_space = spaces.Box(-np.ones(8), np.ones(8))
-        self.action_space = spaces.Box(low=-1, high=1, shape=(2,))
+        if self.params['is_continuous']:
+            self.action_space = spaces.Box(low=-1, high=1, shape=(2,))
+        else:
+            self.action_space = spaces.Discrete(4)
         self.entities = dict()
         self.n_steps = 0
         self.seed()
@@ -33,25 +36,50 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
         res['color'] = color
         return res
 
+    def make_obs(self):
+        return np.concatenate((self.entities["predator"]["pos"],
+                               self.entities["predator"]["vel"]/self.params["predator"]["max_vel"],
+                               self.entities["victim"]["pos"],
+                               self.entities["victim"]["vel"]/self.params["victim"]["max_vel"]))
+
     def reset(self):
         self.n_steps = 0
         self.entities["predator"] = self.create_entity("predator", (1, 0, 0))
         self.entities["victim"] = self.create_entity("victim", (0, 1, 0))
 
-        observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
-                                      self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
+        observation = self.make_obs()
         obs = {"predator": observation, "victim": observation}
         return obs
+
+    @staticmethod
+    def action_to_vector_continuous(action):
+        if np.isnan(action).any():
+            action = np.zeros(2)
+        if np.linalg.norm(action) > 1:
+            return action / np.linalg.norm(action)
+        else:
+            return action
+
+    @staticmethod
+    def action_to_vector_discrete(action):
+        if action == 0:
+            return np.array([1, 0])
+        elif action == 1:
+            return np.array([-1, 0])
+        elif action == 2:
+            return np.array([0, 1])
+        elif action == 3:
+            return np.array([0, -1])
 
     def step(self, action_dict):
         done = False
         self.n_steps += 1
         rewards = {"predator": 0, "victim": 0}
         for key in self.entities:
-            if np.linalg.norm(action_dict[key]) > 1:
-                act = action_dict[key]/np.linalg.norm(action_dict[key])
+            if self.params['is_continuous']:
+                act = self.action_to_vector_continuous(action_dict[key])
             else:
-                act = action_dict[key]
+                act = self.action_to_vector_discrete(action_dict[key])
             self.entities[key]["vel"] += self.params[key]['max_acceleration'] * act
             vel_abs = np.linalg.norm(self.entities[key]["vel"])
             if vel_abs > self.params[key]["max_vel"]:
@@ -64,17 +92,15 @@ class PredatorVictim(gym.Env, MultiAgentEnv):
                     self.entities[key]["vel"][i] *= -1
 
         dist_between = np.linalg.norm(self.entities["predator"]["pos"]-self.entities["victim"]["pos"])
-
-        rewards["victim"] = dist_between*0.01
-        rewards["predator"] = - dist_between * 0.01
+        rewards["victim"] = dist_between*self.params['reward_scale']
+        rewards["predator"] = - dist_between * self.params['reward_scale']
         if dist_between < self.params["catch_distance"]:
             rewards["predator"] += 5/self.n_steps
             done = True
         if self.n_steps > self.params["max_steps"]:
             done = True
-        observation = np.concatenate((self.entities["predator"]["pos"], self.entities["predator"]["vel"],
-                                      self.entities["victim"]["pos"], self.entities["victim"]["vel"]))
 
+        observation = self.make_obs()
         obs = {"predator": observation, "victim": observation}
         dones = {"__all__": done}
 
