@@ -14,6 +14,7 @@ import tensorflow as tf
 from PredatorVictim import PredatorVictim
 from evaluate import evaluate
 
+
 ready_to_exit = False
 def press_key_exit(_q):
     global ready_to_exit
@@ -25,7 +26,9 @@ class PredatorVictimModel(TFModelV2):
         super(PredatorVictimModel, self).__init__(obs_space, action_space, num_outputs, model_config,name)
         input_layer = tf.keras.layers.Input(shape=obs_space.shape, name="observations")
         hidden_layer1 = tf.keras.layers.Dense(500, activation='relu')(input_layer)
-        output_layer = tf.keras.layers.Dense(num_outputs,activation='tanh')(hidden_layer1)
+        output_mean = tf.keras.layers.Dense(2, activation='tanh')(hidden_layer1)
+        output_std = tf.keras.layers.Dense(2, activation='sigmoid')(hidden_layer1)
+        output_layer = tf.keras.layers.Concatenate(axis=1)([output_mean, output_std])
         value_layer = tf.keras.layers.Dense(1)(hidden_layer1)
         self.base_model = tf.keras.Model(input_layer, [output_layer, value_layer])
         self.register_variables(self.base_model.variables)
@@ -78,7 +81,7 @@ if os.path.isfile(model_file):
     weights = pickle.load(open(model_file, "rb"))
     trainer.restore_from_object(weights)
 
-
+'''
 keyboard.on_press_key("q", press_key_exit)
 while True:
     if ready_to_exit:
@@ -89,6 +92,6 @@ while True:
 weights = trainer.save_to_object()
 pickle.dump(weights, open(model_file, 'wb'))
 print('Model saved')
+'''
 
-
-evaluate(trainer, PVEnv)
+evaluate(trainer, PVEnv, video_file='../videos/Predator_Victim_A3C')
