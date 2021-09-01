@@ -88,4 +88,4 @@ weights = trainer.save_to_object()
 pickle.dump(weights, open(model_file, 'wb'))
 print('Model saved')
 
-evaluate(trainer, PVEnv)
+evaluate(trainer, PVEnv, video_file='../videos/Predator_Victim_DQN')

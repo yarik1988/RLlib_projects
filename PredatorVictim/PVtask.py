@@ -48,6 +48,7 @@ def gen_policy(PVEnv, i):
     }
     return None, PVEnv.observation_space, PVEnv.action_space, config
 
+
 def policy_mapping_fn(agent_id):
     if agent_id == 'predator':
         return "policy_predator"
@@ -56,7 +57,7 @@ def policy_mapping_fn(agent_id):
 
 
 model_file = 'PredatorVictim_CA.pickle'
-params = {'predator': {'max_vel': 0.01, 'max_acceleration':0.001},
+params = {'predator': {'max_vel': 0.01, 'max_acceleration': 0.001},
           'victim': {'max_vel': 0.002, 'max_acceleration': 0.0001},
           'reward_scale': 0.01,
           'max_steps': 1000,
@@ -81,7 +82,7 @@ if os.path.isfile(model_file):
     weights = pickle.load(open(model_file, "rb"))
     trainer.restore_from_object(weights)
 
-'''
+
 keyboard.on_press_key("q", press_key_exit)
 while True:
     if ready_to_exit:
@@ -92,6 +93,6 @@ while True:
 weights = trainer.save_to_object()
 pickle.dump(weights, open(model_file, 'wb'))
 print('Model saved')
-'''
+
 
 evaluate(trainer, PVEnv, video_file='../videos/Predator_Victim_A3C')
