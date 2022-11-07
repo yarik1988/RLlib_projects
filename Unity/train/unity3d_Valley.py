@@ -24,7 +24,7 @@ ray.init(logging_level=logging.FATAL, log_to_driver=False)
 tune.register_env(
     "unity3d",
     lambda c: Unity3DEnv(
-        file_name="E:\\UNITY\\build\\2DTest\\2Dtest.exe",
+        file_name="..\\build\\2DTest\\2Dtest.exe",
         no_graphics=True,
         episode_horizon=500,
     ),
