@@ -45,10 +45,9 @@ class VolleyEnv(gym.Env, MultiAgentEnv):
         static_body = self._space.static_body
         line_width = 10.0
         static_lines = [
-            pymunk.Segment(static_body, (0, 0), (0, self.screen_height), line_width),
+            pymunk.Segment(static_body, (0, -10000), (0, self.screen_height), line_width),
             pymunk.Segment(static_body, (0, self.screen_height), (self.screen_width, self.screen_height), line_width),
-            pymunk.Segment(static_body, (self.screen_width, self.screen_height), (self.screen_width, 0), line_width),
-            pymunk.Segment(static_body, (self.screen_width, 0), (0, 0), line_width),
+            pymunk.Segment(static_body, (self.screen_width, self.screen_height), (self.screen_width, -10000), line_width),
             pymunk.Segment(static_body, (self.screen_width / 2, self.screen_height / 2),
                            (self.screen_width / 2, self.screen_height), line_width),
         ]
@@ -75,13 +74,13 @@ class VolleyEnv(gym.Env, MultiAgentEnv):
         Create a ball.
         :return:
         """
-        mass = 1
+        mass = 5
         radius = 30
         inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
         body = pymunk.Body(mass, inertia)
         body.position = position
         body.velocity = 0, 0
-        body.max_velocity=1500
+        body.max_velocity=1000
         shape = pymunk.Circle(body, radius, (0, 0))
         shape.elasticity = 1
         shape.friction = 0
@@ -97,7 +96,7 @@ class VolleyEnv(gym.Env, MultiAgentEnv):
 
 
         def limit_velocity(body, gravity, damping, dt):
-            pymunk.Body.update_velocity(body, (0, 1500), damping, dt)
+            pymunk.Body.update_velocity(body, (0, 1000), damping, dt)
             l = body.velocity.length
             if l > body.max_velocity:
                 scale = body.max_velocity / l
@@ -118,7 +117,7 @@ class VolleyEnv(gym.Env, MultiAgentEnv):
         shape.friction = 0
         self._space.add(body_top, shape)
         body_bottom = pymunk.Body(mass, np.inf)
-        body_bottom.position = posx, posy + (radius_top + radius_bottom) / 2
+        body_bottom.position = posx, posy + (radius_top + radius_bottom) / 1.5
         body_bottom.max_velocity=500
         shape = pymunk.Circle(body_bottom, radius_bottom, (0, 0))
         shape.elasticity = 0
