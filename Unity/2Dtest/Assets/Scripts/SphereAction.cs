@@ -39,7 +39,6 @@ public class SphereAction : Agent
         {
             AddReward(1.0f);
             EndEpisode();
-
         }
         else
         {

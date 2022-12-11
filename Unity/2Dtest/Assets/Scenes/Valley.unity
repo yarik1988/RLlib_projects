@@ -354,7 +354,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: aaf59a1108bdbff4593f4e0cb71b0e39, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: c34c9d50668cf324d847700e20ab7341, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: Sphere
@@ -720,7 +720,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: aaf59a1108bdbff4593f4e0cb71b0e39, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: c34c9d50668cf324d847700e20ab7341, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: Sphere
