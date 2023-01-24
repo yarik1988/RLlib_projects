@@ -20,7 +20,7 @@ running = True
 
 ### Physics stuff
 space = pymunk.Space()
-space.gravity = (0.0, -900.0)
+space.gravity = (0.0, 900.0)
 draw_options = pymunk.pygame_util.DrawOptions(screen)
 
 ## Balls
@@ -28,13 +28,15 @@ balls = []
 
 ### walls
 static_body = space.static_body
-static_lines = [pymunk.Segment(static_body, (111.0, 280.0), (407.0, 246.0), 0.0)
-    , pymunk.Segment(static_body, (407.0, 246.0), (407.0, 343.0), 0.0)
+static_lines = [pymunk.Segment(static_body, (600.0, 400.0), (400.0, 500.0), 0.0)
+    , pymunk.Segment(static_body, (100, 300.0), (400.0, 500.0), 0.0)
                 ]
 for line in static_lines:
     line.elasticity = 0.95
     line.friction = 0.9
-space.add(static_lines)
+
+for ln in static_lines:
+    space.add(ln)
 
 ticks_to_next_ball = 10
 
@@ -55,7 +57,7 @@ while running:
         inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
         body = pymunk.Body(mass, inertia)
         x = random.randint(115, 350)
-        body.position = x, 400
+        body.position = x, 100
         shape = pymunk.Circle(body, radius, (0, 0))
         shape.elasticity = 0.95
         shape.friction = 0.9
