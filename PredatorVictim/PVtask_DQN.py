@@ -3,9 +3,9 @@ import pickle
 import keyboard
 import gym
 import ray
-import ray.rllib.agents.dqn as dqn
+import ray.rllib.algorithms.dqn as dqn
 from ray.rllib.models import ModelCatalog
-from ray.rllib.agents.dqn.distributional_q_tf_model import DistributionalQTFModel
+from ray.rllib.algorithms.dqn.distributional_q_tf_model import DistributionalQTFModel
 from ray.tune.registry import register_env
 import tensorflow as tf
 from PredatorVictim import PredatorVictim
@@ -38,9 +38,9 @@ class PredatorVictimModel(DistributionalQTFModel):
         return model_out, logits, dist
 
 def gen_policy(PVEnv, i):
-    ModelCatalog.register_custom_model("PredatorVictimModel_{}".format(i), PredatorVictimModel)
+    #ModelCatalog.register_custom_model("PredatorVictimModel_{}".format(i), PredatorVictimModel)
     config = {
-       "model": {"custom_model": "PredatorVictimModel_{}".format(i)},
+       #"model": {"custom_model": "PredatorVictimModel_{}".format(i)},
     }
     return None, PVEnv.observation_space, PVEnv.action_space, config
 
@@ -59,18 +59,18 @@ params = {'predator': {'max_vel': 0.01, 'max_acceleration':0.001},
 
 
 ray.init(include_dashboard=False)
-ModelCatalog.register_custom_model("CartpoleModel", PredatorVictimModel)
+#ModelCatalog.register_custom_model("CartpoleModel", PredatorVictimModel)
 PVEnv = gym.make("PredatorVictim-v0", params=params)
+PVEnv._skip_env_checking=True
 register_env("PredatorVictimEnv", lambda _: PVEnv)
 
-trainer = dqn.DQNTrainer(env="PredatorVictimEnv", config={
+trainer = dqn.DQN(env="PredatorVictimEnv", config={
         "multiagent": {
             "policies": {"policy_predator": gen_policy(PVEnv, 0),
                          "policy_victim": gen_policy(PVEnv, 1)},
             "policy_mapping_fn": policy_mapping_fn,
             },
-    "hiddens": [20],
-    "learning_starts": 0
+    "hiddens": [20]
     })
 
 if os.path.isfile(model_file):

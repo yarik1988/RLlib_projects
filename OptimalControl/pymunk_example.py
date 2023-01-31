@@ -57,7 +57,7 @@ while running:
         inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
         body = pymunk.Body(mass, inertia)
         x = random.randint(115, 350)
-        body.position = x, 100
+        body.position = x, 50
         shape = pymunk.Circle(body, radius, (0, 0))
         shape.elasticity = 0.95
         shape.friction = 0.9
@@ -70,7 +70,7 @@ while running:
     ### Draw stuff
     balls_to_remove = []
     for ball in balls:
-        if ball.body.position.y < 100: balls_to_remove.append(ball)
+        if ball.body.position.y > 600: balls_to_remove.append(ball)
 
     for ball in balls_to_remove:
         space.remove(ball, ball.body)

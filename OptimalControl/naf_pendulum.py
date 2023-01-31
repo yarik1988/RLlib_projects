@@ -5,11 +5,11 @@ import gym
 from gym import wrappers
 import SimpleControl
 import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Dense, Activation, Flatten, Input, Concatenate
 from tensorflow.keras.optimizers import *
-import rllib
-from rllib.agents import NAFAgent
+from ray import rllib
+from ray.rllib.agents import NAFAgent
 from rllib.memory import SequentialMemory
 from rllib.random import OrnsteinUhlenbeckProcess
 from tensorflow.keras.callbacks import *

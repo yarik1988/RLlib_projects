@@ -3,7 +3,6 @@ import pickle
 import keyboard
 import numpy as np
 import gym
-import cv2
 import ray
 import ray.rllib.agents.a3c as a3c
 import ray.rllib.agents.ddpg as ddpg
