@@ -4,6 +4,8 @@ Pymunk version by Ian Danforth
 """
 import time
 import math
+from typing import Optional
+
 import gym
 import pygame
 import pymunk
@@ -53,7 +55,7 @@ class PymunkCartPoleEnv(gym.Env):
             self.theta_threshold_radians * 2,
             np.finfo(np.float32).max])
 
-        self.observation_space = spaces.Box(-high, high)
+        self.observation_space = spaces.Box(-high*2, high*2,dtype=np.double)
 
         self.steps_beyond_done = None
 
@@ -88,7 +90,7 @@ class PymunkCartPoleEnv(gym.Env):
             cart_x,
             track_pos_y
         )
-        self.cart_body.velocity = Vec2d(self.np_random.uniform(low=-20, high=20), 0.0)
+        self.cart_body.velocity = Vec2d(self.np_random.uniform(low=-10, high=10), 0.0)
         # Pole
         pole_length = 110
         pole_mass = 0.1
@@ -138,14 +140,14 @@ class PymunkCartPoleEnv(gym.Env):
         if theta >= math.pi:
             theta = theta - tau
         x = self.cart_body.position[0]
-        center_dist = (2 * x - self.screen_width) / self.screen_width
+        center_dist = (2*x - self.screen_width) / self.screen_width
         # Out of bounds failure
         done = x < 0.0 or x > self.screen_width
         # Angular failure
         if not done:
             done = theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians
 
-        reward = 1.0-2*abs(center_dist)
+        reward = 1.0-0.1*(abs(center_dist)+abs(theta))
 
         if done and self.steps_beyond_done is None:
             self.steps_beyond_done = 0
@@ -169,7 +171,7 @@ class PymunkCartPoleEnv(gym.Env):
             theta,
             pole_ang_velocity
         )
-        return np.array(obs), reward, done, {}
+        return np.array(obs), reward/10.0, done, {}
 
     def render(self, mode='human'):
         if self.screen == None:
@@ -196,6 +198,18 @@ class PymunkCartPoleEnv(gym.Env):
             del self.space
         self._initPymunk()
         center_dist = (2 * self.cart_body.position[0] - self.screen_width) / self.screen_width
-        fo = (center_dist,self.cart_body.velocity[0]/50,
-                  self.pole_body.angle % math.pi * 2, self.pole_body.angular_velocity)
-        return fo
+
+        cart_x_velocity = self.cart_body.velocity[0]
+        pole_ang_velocity = self.pole_body.angular_velocity
+        tau = math.pi * 2
+        theta = self.pole_body.angle % tau
+        if theta >= math.pi:
+            theta = theta - tau
+        obs = (
+            center_dist,
+            cart_x_velocity / 50,
+            theta,
+            pole_ang_velocity
+        )
+
+        return np.array(obs)
