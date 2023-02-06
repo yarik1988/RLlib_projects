@@ -1,7 +1,7 @@
 import os
 import keyboard
 import ray
-import ray.rllib.algorithms.a3c as a3c
+import ray.rllib.algorithms.a2c as a2c
 from ray.rllib.algorithms import Algorithm
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
@@ -27,7 +27,8 @@ env_creator = lambda config: create_my_env()
 ray.init(include_dashboard=False)
 register_env("CP", env_creator)
 ModelCatalog.register_custom_model("CartpoleModel", CartpoleModel)
-trainer = a3c.A3C(env="CP", config={"model": {"custom_model": "CartpoleModel"},'create_env_on_driver':True})
+#trainer=Algorithm.from_checkpoint('cartpole_checkpoints/checkpoint_000103')
+trainer = a2c.A2C(env="CP", config={"model": {"custom_model": "CartpoleModel"},'create_env_on_driver':True})
 keyboard.on_press_key("q", press_key_exit)
 while True:
     if ready_to_exit:

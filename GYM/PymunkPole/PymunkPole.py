@@ -61,6 +61,7 @@ class PymunkCartPoleEnv(gym.Env):
 
     def _initPymunk(self):
         # Simulation space
+        pymunk.pygame_util.positive_y_is_up = True
         self.steps_count = 0
         self.space = pymunk.Space()
         self.space.gravity = (0.0, -980.0)
@@ -146,9 +147,7 @@ class PymunkCartPoleEnv(gym.Env):
         # Angular failure
         if not done:
             done = theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians
-
-        reward = 1.0-0.1*(abs(center_dist)+abs(theta))
-
+        reward = 1.0-0.5*abs(center_dist)
         if done and self.steps_beyond_done is None:
             self.steps_beyond_done = 0
         else:
@@ -171,16 +170,14 @@ class PymunkCartPoleEnv(gym.Env):
             theta,
             pole_ang_velocity
         )
-        return np.array(obs), reward/10.0, done, {}
+        return np.array(obs), reward/10, done, {}
 
     def render(self, mode='human'):
-        if self.screen == None:
-            print('Setting up screen')
+        if self.screen is None:
             pygame.init()
             self.screen = pygame.display.set_mode(
                 (self.screen_width, self.screen_height)
             )
-
             # Debug draw setup (called in render())
             self.draw_options = pymunk.pygame_util.DrawOptions(self.screen)
             self.draw_options.flags = 3

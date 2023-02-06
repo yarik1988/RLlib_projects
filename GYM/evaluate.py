@@ -27,7 +27,7 @@ register(
 ray.init(include_dashboard=False)
 register_env("CP",lambda _: PymunkPole.PymunkCartPoleEnv())
 ModelCatalog.register_custom_model("CartpoleModel", CartpoleModel)
-trainer=Algorithm.from_checkpoint('cartpole_checkpoints/checkpoint_000066')
+trainer=Algorithm.from_checkpoint('cartpole_checkpoints/checkpoint_000103')
 CartpoleEnv=gym.make("PymunkPole-v0")
 obs = CartpoleEnv.reset()
 cur_action = None

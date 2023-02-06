@@ -1,13 +1,8 @@
-import os
-import pickle
 import time
 import gym
-import numpy as np
 import tensorflow as tf
-import ray
 from gym import register
 from ray.rllib import TFPolicy
-from ray.rllib.algorithms.a3c import a3c
 from ray.rllib.models import ModelCatalog
 from ray.tune import register_env
 from PymunkPole import PymunkPole
@@ -17,7 +12,7 @@ tf.compat.v1.disable_eager_execution()
 register(
     id='PymunkPole-v0',
     entry_point='PymunkPole.PymunkPole:PymunkCartPoleEnv',
-    max_episode_steps=20000
+    max_episode_steps=10000
 )
 
 register_env("CP",lambda _: PymunkPole.PymunkCartPoleEnv())
