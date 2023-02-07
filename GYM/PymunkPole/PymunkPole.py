@@ -188,7 +188,7 @@ class PymunkCartPoleEnv(gym.Env):
         self.screen.fill((255, 255, 255))
         self.space.debug_draw(self.draw_options)
         pygame.display.flip()
-        self.clock.tick(50)
+        self.clock.tick(60)
 
     def reset(self):
         if self.space:

@@ -30,6 +30,5 @@ while not done:
     obs, rew, done, info = CartpoleEnv.step(actions[0])
     total_rev += rew
     CartpoleEnv.render()
-    time.sleep(0.01)
 print(total_rev)
 CartpoleEnv.close()
