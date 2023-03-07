@@ -6,22 +6,21 @@ import time
 import math
 from typing import Optional
 
-import gym
+import gymnasium
 import pygame
 import pymunk
 import pymunk.pygame_util
 import numpy as np
 from pymunk.vec2d import Vec2d
-from gym import spaces, logger
-from gym.utils import seeding
+from gymnasium import spaces, logger
+from gymnasium.utils import seeding
 
 from . import cartpole_utils as utils
 
 
-class PymunkCartPoleEnv(gym.Env):
+class PymunkCartPoleEnv(gymnasium.Env):
     metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 50
+        'render_modes': ['human', 'rgb_array'],
     }
 
     def __init__(self):
@@ -170,7 +169,7 @@ class PymunkCartPoleEnv(gym.Env):
             theta,
             pole_ang_velocity
         )
-        return np.array(obs), reward/10, done, {}
+        return np.array(obs,dtype=np.float64), reward/10, done, False, {}
 
     def render(self, mode='human'):
         if self.screen is None:
@@ -190,7 +189,9 @@ class PymunkCartPoleEnv(gym.Env):
         pygame.display.flip()
         self.clock.tick(60)
 
-    def reset(self):
+    def reset(self,*,
+        seed: Optional[int] = None,
+        options: Optional[dict] = None):
         if self.space:
             del self.space
         self._initPymunk()
@@ -209,4 +210,4 @@ class PymunkCartPoleEnv(gym.Env):
             pole_ang_velocity
         )
 
-        return np.array(obs)
+        return np.array(obs,dtype=np.float64), {}

@@ -1,13 +1,9 @@
-import os
-import pickle
-import time
-import gym
-import numpy as np
-import tensorflow as tf
+"""evaluate via restoring from checkpoint """
+
 import ray
-from gym import register
+import gymnasium
+from gymnasium import register
 from ray.rllib.algorithms import Algorithm
-from ray.rllib.algorithms.a3c import a3c
 from ray.rllib.models import ModelCatalog
 from ray.tune import register_env
 
@@ -22,17 +18,18 @@ register(
 ray.init(include_dashboard=False)
 register_env("CP",lambda _: PymunkPole.PymunkCartPoleEnv())
 ModelCatalog.register_custom_model("CartpoleModel", CartpoleModel)
-trainer=Algorithm.from_checkpoint('cartpole_checkpoints/checkpoint_000047')
-CartpoleEnv=gym.make("PymunkPole-v0")
-obs = CartpoleEnv.reset()
+trainer=Algorithm.from_checkpoint('cartpole_checkpoints/checkpoint_000041')
+CartpoleEnv=gymnasium.make("PymunkPole-v0")
+obs, _ = CartpoleEnv.reset()
 cur_action = None
 total_rev = 0
 rew = None
 info = None
+truncated=None
 done = False
 while not done:
     cur_action = trainer.compute_single_action(obs,prev_action=cur_action,prev_reward=rew,info=info)
-    obs, rew, done, info = CartpoleEnv.step(cur_action)
+    obs, rew, done, truncated, info = CartpoleEnv.step(cur_action)
     total_rev += rew
     CartpoleEnv.render()
 print(total_rev)

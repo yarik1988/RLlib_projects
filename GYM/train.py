@@ -5,9 +5,9 @@ import ray.rllib.algorithms.a2c as a2c
 from ray.rllib.algorithms import Algorithm
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 import pickle
-import gym
+import gymnasium
 from models import CartpoleModel
 
 ready_to_exit = False
@@ -19,9 +19,9 @@ def create_my_env():
     register(
         id='PymunkPole-v0',
         entry_point='PymunkPole.PymunkPole:PymunkCartPoleEnv',
-        max_episode_steps=200
+        max_episode_steps=200,
     )
-    return gym.make("PymunkPole-v0")
+    return gymnasium.make("PymunkPole-v0")
 
 env_creator = lambda config: create_my_env()
 ray.init(include_dashboard=False)
