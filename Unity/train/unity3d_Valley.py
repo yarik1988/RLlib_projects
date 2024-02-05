@@ -1,3 +1,4 @@
+import os
 import argparse
 import logging
 import tensorflow as tf
@@ -8,13 +9,13 @@ from ray import air, tune
 from ray.rllib.algorithms.ppo import PPOConfig, ppo
 from ray.rllib.env.wrappers.unity3d_env import Unity3DEnv
 from ray.rllib.policy.policy import PolicySpec
-
+from fix import fix_graph
 parser = argparse.ArgumentParser()
-parser.add_argument("--backend", type=str, default="tf")
+parser.add_argument("--backend", type=str, default="torch")
 parser.add_argument("--num_workers", type=int, default=0)
-parser.add_argument("--max_iterations", type=int, default=50000)
+parser.add_argument("--max_iterations", type=int, default=100000)
 args = parser.parse_args()
-out_folder = "ray_"+args.backend
+out_folder = os.path.join(os.getcwd(),"ray_"+args.backend)
 if args.backend == "torch":
     num_gpus = torch.cuda.device_count()
 else:
@@ -43,24 +44,22 @@ config = (
     PPOConfig()
     .environment(
         "unity3d",
-        env_config={"episode_horizon": 500,'mask': True},
+        env_config={"episode_horizon": 500},
         disable_env_checking=True,
     )
     .rollouts(
         num_rollout_workers=args.num_workers,
-        no_done_at_end=True,
-        rollout_fragment_length=100,
+        rollout_fragment_length=256,
     )
     .framework(framework=args.backend)
     .training(
-        lr=0.0003,
+        lr=0.001,
         lambda_=0.95,
         gamma=0.99,
-        sgd_minibatch_size=64,
-        #train_batch_size=128,
+        sgd_minibatch_size=32,
         num_sgd_iter=4,
-        clip_param=0.2,
-        model={"fcnet_hiddens": [20, 20]},
+        clip_param=0.3,
+        model={"fcnet_hiddens": [64, 64]},
     )
     .debugging(log_level="ERROR")
     .multi_agent(policies=policies, policy_mapping_fn=policy_mapping_fn)
@@ -89,4 +88,6 @@ agent = ppo.PPO(config=config, env="unity3d")
 agent.restore(results.get_best_result().checkpoint)
 agent.get_policy("Valley").export_model(out_folder, onnx=9)
 print("Model saved successfully!")
+fix_graph(os.path.join(out_folder,"model.onnx"))
 ray.shutdown()
+

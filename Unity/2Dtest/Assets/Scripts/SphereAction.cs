@@ -10,18 +10,16 @@ public class SphereAction : Agent
 {
     public float impulseStep = 1.0f;
     Rigidbody2D m_Rigidbody;
-    Vector2 init_pos;
     bool is_finish;
 
     public override void Initialize()
     {
-        m_Rigidbody = GetComponent<Rigidbody2D>();
-        init_pos = this.transform.localPosition;
+        m_Rigidbody = GetComponent<Rigidbody2D>();  
     }
 
     public override void OnEpisodeBegin()
     {
-        this.transform.localPosition = init_pos;
+        this.transform.localPosition = UnityEngine.Random.insideUnitCircle * 5;
         m_Rigidbody.velocity = new Vector2(0, 0);
         m_Rigidbody.rotation = 0;
         is_finish = false;
