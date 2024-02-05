@@ -11,19 +11,20 @@ import pygame
 import pymunk
 import pymunk.pygame_util
 import numpy as np
+from gymnasium.envs.registration import EnvSpec
 from pymunk.vec2d import Vec2d
 from gymnasium import spaces, logger
 from gymnasium.utils import seeding
-
-from . import cartpole_utils as utils
-
+from ray.rllib.env import EnvContext
+import PymunkPole.cartpole_utils as utils
 
 class PymunkCartPoleEnv(gymnasium.Env):
     metadata = {
         'render_modes': ['human', 'rgb_array'],
+        'render_fps':60
     }
 
-    def __init__(self):
+    def __init__(self, config: EnvContext=None):
         # Pygame and display setup
         self.screen = None
         self.draw_options = None
@@ -34,6 +35,8 @@ class PymunkCartPoleEnv(gymnasium.Env):
         self.force_mag = 500.0
         self.manual_force = 0
         self.steps_count = 0
+        self.spec=EnvSpec(id="PymunkCartPoleEnv",max_episode_steps=config["max_steps"]
+                if config is not None and "max_steps" in config else None)
         self._initPymunk()
         # Action Space
 
@@ -55,8 +58,6 @@ class PymunkCartPoleEnv(gymnasium.Env):
             np.finfo(np.float32).max])
 
         self.observation_space = spaces.Box(-high*2, high*2,dtype=np.double)
-
-        self.steps_beyond_done = None
 
     def _initPymunk(self):
         # Simulation space
@@ -120,7 +121,6 @@ class PymunkCartPoleEnv(gymnasium.Env):
 
     def step(self, action):
         self.steps_count = self.steps_count+1
-
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
         if action == 0:
             force = self.force_mag
@@ -141,26 +141,12 @@ class PymunkCartPoleEnv(gymnasium.Env):
             theta = theta - tau
         x = self.cart_body.position[0]
         center_dist = (2*x - self.screen_width) / self.screen_width
-        # Out of bounds failure
-        done = x < 0.0 or x > self.screen_width
-        # Angular failure
-        if not done:
-            done = theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians
         reward = 1.0-0.5*abs(center_dist)
-        if done and self.steps_beyond_done is None:
-            self.steps_beyond_done = 0
-        else:
-            if self.steps_beyond_done == 0:
-                logger.warn("""
-                You are calling 'step()' even though this environment has already returned
-                done = True. You should always call 'reset()' once you receive 'done = True'
-                Any further steps are undefined behavior.
-                """)
-                self.steps_beyond_done += 1
-                reward = 0.0
+        # Out of bounds failure
+        terminated = x < 0.0 or x > self.screen_width or theta < -self.theta_threshold_radians or theta > self.theta_threshold_radians
+        truncated = False if self.spec.max_episode_steps is None else self.steps_count >= self.spec.max_episode_steps
 
         self.space.step(1 / 50.0)
-
         cart_x_velocity = self.cart_body.velocity[0]
         pole_ang_velocity = self.pole_body.angular_velocity
         obs = (
@@ -169,7 +155,7 @@ class PymunkCartPoleEnv(gymnasium.Env):
             theta,
             pole_ang_velocity
         )
-        return np.array(obs,dtype=np.float64), reward/10, done, False, {}
+        return np.array(obs,dtype=np.float64), reward/10, terminated, truncated, {}
 
     def render(self, mode='human'):
         if self.screen is None:

@@ -1,2 +1,2 @@
-/cartpole_checkpoints
-/policy_checkpoint
+/trainer_*
+/policy_*
