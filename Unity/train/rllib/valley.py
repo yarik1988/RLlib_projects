@@ -9,11 +9,11 @@ from ray import air, tune
 from ray.rllib.algorithms.ppo import PPOConfig, ppo
 from ray.rllib.env.wrappers.unity3d_env import Unity3DEnv
 from ray.rllib.policy.policy import PolicySpec
-from fix import fix_graph
+from fix_2024 import fix_graph
 parser = argparse.ArgumentParser()
 parser.add_argument("--backend", type=str, default="torch")
-parser.add_argument("--num_workers", type=int, default=0)
-parser.add_argument("--max_iterations", type=int, default=100000)
+parser.add_argument("--num_workers", type=int, default=8)
+parser.add_argument("--max_iterations", type=int, default=200000)
 args = parser.parse_args()
 out_folder = os.path.join(os.getcwd(),"ray_"+args.backend)
 if args.backend == "torch":
@@ -25,9 +25,9 @@ ray.init(logging_level=logging.FATAL, log_to_driver=False)
 tune.register_env(
     "unity3d",
     lambda c: Unity3DEnv(
-        file_name="..\\build\\2DTest\\2Dtest.exe",
+        file_name="..\\..\\build\\2DTest\\2Dtest.exe",
         no_graphics=True,
-        episode_horizon=500,
+        episode_horizon=512,
     ),
 )
 game_name = "Valley"
@@ -44,21 +44,27 @@ config = (
     PPOConfig()
     .environment(
         "unity3d",
-        env_config={"episode_horizon": 500},
+        env_config={"episode_horizon": 512},
         disable_env_checking=True,
     )
     .rollouts(
         num_rollout_workers=args.num_workers,
-        rollout_fragment_length=256,
+        rollout_fragment_length=128,
     )
     .framework(framework=args.backend)
     .training(
-        lr=0.001,
+        lr_schedule= [
+            [0, 0.002],
+            [100000, 0.0003],
+        ],
         lambda_=0.95,
         gamma=0.99,
         sgd_minibatch_size=32,
         num_sgd_iter=4,
-        clip_param=0.3,
+        clip_param=0.2,
+        kl_coeff=0.5,
+        kl_target=0.01,
+        entropy_coeff=0.001,
         model={"fcnet_hiddens": [64, 64]},
     )
     .debugging(log_level="ERROR")

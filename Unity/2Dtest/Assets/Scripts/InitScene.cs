@@ -10,6 +10,7 @@ public class InitScene : MonoBehaviour
     [SerializeField]
     public NNModel modelAsset;
     public GameObject AgentPrefab;
+    public bool deterministicInference = true;
     void Start()
     {
         int num_agents = (modelAsset == null) ? 1 : 4;
@@ -17,6 +18,7 @@ public class InitScene : MonoBehaviour
             {
             GameObject cur_agent = Instantiate(AgentPrefab,new Vector2(0,0), Quaternion.identity);
             BehaviorParameters bp = cur_agent.GetComponent<BehaviorParameters>();
+            bp.DeterministicInference = deterministicInference;
             bp.Model = modelAsset;
         }
     }
