@@ -36,7 +36,8 @@ public class SphereAction : Agent
         if (is_finish)
         {
             AddReward(1.0f);
-            EndEpisode();
+            Debug.Log("Cumulative reward: " + GetCumulativeReward());
+            EndEpisode();            
         }
         else
         {
