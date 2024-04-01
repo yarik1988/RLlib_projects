@@ -1,8 +1,8 @@
 import os
 import argparse
 import logging
-import tensorflow as tf
-import torch
+# import tensorflow as tf
+# import torch
 import ray
 from gym.spaces import Box, MultiDiscrete
 from ray import air, tune
@@ -11,21 +11,24 @@ from ray.rllib.env.wrappers.unity3d_env import Unity3DEnv
 from ray.rllib.policy.policy import PolicySpec
 from fix_2024 import fix_graph
 parser = argparse.ArgumentParser()
-parser.add_argument("--backend", type=str, default="torch")
-parser.add_argument("--num_workers", type=int, default=8)
-parser.add_argument("--max_iterations", type=int, default=200000)
+parser.add_argument("--backend", dest="backend", type=str, default="torch")
+parser.add_argument("--num-workers", dest="num_workers", type=int, default=8)
+parser.add_argument("--max-iterations", dest="max_iterations", type=int, default=200000)
+parser.add_argument("--unity-exe-name", dest="unity_exe_name", type=str, default="..\\..\\build\\2DTest\\2Dtest.exe")
 args = parser.parse_args()
 out_folder = os.path.join(os.getcwd(),"ray_"+args.backend)
 if args.backend == "torch":
+    import torch
     num_gpus = torch.cuda.device_count()
 else:
+    import tensorflow as tf
     num_gpus = len(tf.config.list_physical_devices('GPU'))
 
 ray.init(logging_level=logging.FATAL, log_to_driver=False)
 tune.register_env(
     "unity3d",
     lambda c: Unity3DEnv(
-        file_name="..\\..\\build\\2DTest\\2Dtest.exe",
+        file_name=args.unity_exe_name,
         no_graphics=True,
         episode_horizon=512,
     ),
@@ -89,11 +92,12 @@ tuner = tune.Tuner(
     ),
 )
 results = tuner.fit()
+print("Got results")
 config.num_rollout_workers = 0
 agent = ppo.PPO(config=config, env="unity3d")
 agent.restore(results.get_best_result().checkpoint)
 agent.get_policy("Valley").export_model(out_folder, onnx=9)
 print("Model saved successfully!")
 fix_graph(os.path.join(out_folder,"model.onnx"))
+print("Fixed model")
 ray.shutdown()
-
