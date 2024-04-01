@@ -5,7 +5,15 @@ from gymnasium import register
 from ray.rllib import TFPolicy, TorchPolicy
 from ray.rllib.models import ModelCatalog
 from custom_models import *
-backend="tf"
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "backend", type=str, default="torch", help="Specify the used ML framework (torch or tf)"
+)
+args = parser.parse_args()
+backend = args.backend
 register(id='PymunkPole-v0',entry_point='PymunkPole.PymunkPoleEnv:PymunkCartPoleEnv')
 ModelCatalog.register_custom_model("reg_model",
                                    RegularizedTorchModel if backend == "torch" else RegularizedTFModel)

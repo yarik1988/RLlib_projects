@@ -1,15 +1,10 @@
 import argparse
 
-import keyboard
 import ray
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import get_trainable_cls
 from PymunkPole.PymunkPoleEnv import PymunkCartPoleEnv
 from custom_models import *
-ready_to_exit = False
-def press_key_exit(_q):
-    global ready_to_exit
-    ready_to_exit=True
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -20,6 +15,9 @@ parser.add_argument(
     choices=["tf", "tf2", "torch"],
     default="torch",
     help="The DL framework specifier.",
+)
+parser.add_argument(
+    "--steps", type=int, default=25, help="How many iterations of training to perform."
 )
 ray.init()
 args = parser.parse_args()
@@ -35,14 +33,20 @@ config = (
         .resources(num_gpus=0)
     )
 trainer = config.build()
-keyboard.on_press_key("q", press_key_exit)
-while True:
-    if ready_to_exit:
+print("Press Ctrl+C to interrupt.")
+step = 0
+while step < args.steps:
+    try:
+        step = step + 1
+        rest = trainer.train()
+        cur_reward=rest["episode_reward_mean"]
+        print("step {}/{}, avg. reward: {}, avg. episode length: {}".format(step, args.steps, cur_reward, rest["episode_len_mean"]))
+    except KeyboardInterrupt:
+        print("Interrupted!")
         break
-    rest = trainer.train()
-    cur_reward=rest["episode_reward_mean"]
-    print("avg. reward",cur_reward,"avg. episode length",rest["episode_len_mean"])
 
+
+print("Saving and exiting...")
 trainer.save("trainer_"+args.framework)
 default_policy=trainer.get_policy(policy_id="default_policy")
 default_policy.export_checkpoint("policy_"+args.framework)
