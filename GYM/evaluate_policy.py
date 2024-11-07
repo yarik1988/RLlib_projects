@@ -24,7 +24,7 @@ if backend=="torch":
     my_restored_policy = TorchPolicy.from_checkpoint(checkpoint)
 elif backend=="tf":
     checkpoint = Checkpoint.from_directory("policy_tf")
-    my_restored_policy = TFPolicy.from_checkpoint("policy_"+backend)
+    my_restored_policy = TFPolicy.from_checkpoint(checkpoint)
 CartpoleEnv=gymnasium.make("PymunkPole-v0",max_episode_steps=500)
 obs, _ = CartpoleEnv.reset()
 cur_action = None
