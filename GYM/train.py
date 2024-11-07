@@ -39,8 +39,8 @@ while step < args.steps:
     try:
         step = step + 1
         rest = trainer.train()
-        cur_reward=rest["episode_reward_mean"]
-        print("step {}/{}, avg. reward: {}, avg. episode length: {}".format(step, args.steps, cur_reward, rest["episode_len_mean"]))
+        cur_reward=rest['env_runners']['episode_reward_mean']
+        print("step {}/{}, avg. reward: {}, avg. episode length: {}".format(step, args.steps, cur_reward, rest['env_runners']["episode_len_mean"]))
     except KeyboardInterrupt:
         print("Interrupted!")
         break
